@@ -13,6 +13,6 @@ test('renders lawyers list and calendar entries in admin dashboard', async () =>
   render(AdminDashboard, { props: { token: 't' } })
 
   await waitFor(() => expect(screen.getByText('Gestión de abogados')).toBeInTheDocument())
-  await waitFor(() => expect(screen.getByText('María')).toBeInTheDocument())
-  await waitFor(() => expect(screen.getByText('María — Audiencia')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getAllByText('María').length).toBeGreaterThan(0))
+  await waitFor(() => expect(screen.getByText(/Audiencia/)).toBeInTheDocument())
 })

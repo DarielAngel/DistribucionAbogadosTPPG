@@ -14,7 +14,7 @@ test('submits credentials and emits login', async () => {
   const passwordInput = inputs[1]
   await fireEvent.update(emailInput, 'user@example.com')
   await fireEvent.update(passwordInput, 'secret')
-  await fireEvent.click(screen.getByText('Entrar'))
+  await fireEvent.click(screen.getByText('Log In'))
   // Wait for axios mock to resolve and for component to emit login
   await waitFor(() => expect(axios.post).toHaveBeenCalled())
   await waitFor(() => expect(emitted().login).toBeTruthy())

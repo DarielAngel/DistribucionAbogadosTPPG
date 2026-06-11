@@ -4,7 +4,7 @@
     <Login v-if="!token" @login="onLogin" />
     <div v-else>
       <AdminDashboard v-if="isAdmin" :token="token" />
-      <CalendarView v-else :token="token" />
+      <MonthSchedule v-else :token="token" />
     </div>
   </div>
 </template>
@@ -12,10 +12,11 @@
 <script>
 import Login from './components/Login.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import MonthSchedule from './components/MonthSchedule.vue'
 import CalendarView from './components/CalendarView.vue'
 
 export default {
-  components: { Login, AdminDashboard, CalendarView },
+  components: { Login, AdminDashboard, CalendarView, MonthSchedule },
   data(){
     return { token: null, isAdmin: false }
   },

@@ -24,10 +24,15 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
 
 // Get schedules, filter by lawyerId/date range
 router.get('/', authenticate, async (req, res) => {
-  const { lawyerId, date, startDate, endDate } = req.query;
+  const { lawyerId, lawyerIds, date, startDate, endDate } = req.query;
   const where = {};
   const { Op } = require('sequelize');
   if(lawyerId) where.lawyerId = lawyerId;
+  if(lawyerIds){
+    // accept comma separated ids
+    const ids = String(lawyerIds).split(',').map(x=>parseInt(x)).filter(Boolean);
+    if(ids.length) where.lawyerId = { [Op.in]: ids };
+  }
   if(date) where.date = date;
   if(startDate || endDate){
     where.date = {};
