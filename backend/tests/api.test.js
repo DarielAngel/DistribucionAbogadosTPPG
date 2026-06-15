@@ -19,8 +19,10 @@ describe('API basic', () => {
   test('GET /api/lawyers returns list', async () => {
     const res = await request(app).get('/api/lawyers');
     expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThanOrEqual(1);
-    expect(res.body[0]).toHaveProperty('name');
+    // API returns a paginated response: { items, total, page, pageSize }
+    expect(res.body).toHaveProperty('items');
+    expect(Array.isArray(res.body.items)).toBe(true);
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.items[0]).toHaveProperty('name');
   });
 });
