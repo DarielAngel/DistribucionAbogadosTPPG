@@ -113,26 +113,21 @@ export default {
     async fetchPage(){
       const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
       const base = (import.meta.env.VITE_API_URL||'/api');
-      // fetch schedules for the month (tests mock this call)
+      // fetch paged lawyers from API
+      const lawRes = await axios.get(base + `/lawyers?page=${this.page}&pageSize=${this.pageSize}`, { headers });
+      // API may return { items, total }
+      this.lawyers = lawRes.data.items || lawRes.data || [];
+      const total = (lawRes.data && lawRes.data.total) || (Array.isArray(lawRes.data) ? lawRes.data.length : 0);
+      this.totalCount = total;
+      this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+
+      // fetch schedules only for visible lawyers
       const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
       const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
-      const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}`, { headers });
+      const ids = this.lawyers.map(l=>l.id).filter(Boolean).join(',');
+      const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
       this.schedules = schedRes.data || [];
-      // derive lawyers from schedules when needed (tests provide schedules with Lawyer.name)
-      const lwMap = {};
-      this.schedules.forEach((s, idx) => {
-        if(!s.lawyerId){ s.lawyerId = s.lawyerId || (s.Lawyer && s.Lawyer.id) || ('gen_' + idx) }
-        const lid = s.lawyerId;
-        if(s.Lawyer && s.Lawyer.name){
-          lwMap[lid] = lwMap[lid] || { id: lid, name: s.Lawyer.name, specialization: s.type || '' };
-        } else {
-          lwMap[lid] = lwMap[lid] || { id: lid, name: '—', specialization: '' };
-        }
-      });
-      this.lawyers = Object.values(lwMap);
-      // set counts
-      this.totalCount = this.lawyers.length || 0;
-      this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+
       // build map lawyerId -> day -> [schedules]
       const m = {};
       for(const s of this.schedules){
