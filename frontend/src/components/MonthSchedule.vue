@@ -2,7 +2,15 @@
   <div>
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-medium">Cronograma del mes</h3>
-      <div class="text-sm text-gray-600">{{ monthLabel }}</div>
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-gray-600">{{ monthLabel }}</div>
+        <select v-model.number="month" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+          <option v-for="(m,i) in monthNames" :key="i" :value="i">{{ m }}</option>
+        </select>
+        <select v-model.number="year" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </div>
     </div>
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
@@ -19,8 +27,12 @@
         <button class="px-2 py-1 border rounded bg-white" :disabled="page===totalPages" @click="nextPage">Siguiente</button>
       </div>
     </div>
-    <div class="overflow-auto border rounded">
-      <table class="min-w-full table-fixed text-sm">
+    <!-- Top synchronized scrollbar -->
+    <div ref="topScroll" class="overflow-x-auto overflow-y-hidden" style="height:16px;">
+      <div ref="topInner" style="height:1px;"></div>
+    </div>
+    <div ref="bottomScroll" class="overflow-auto border rounded">
+      <table ref="tableRef" class="min-w-full table-fixed text-sm">
         <thead class="bg-gray-100 sticky top-0">
           <tr>
             <th class="p-2 w-48">Abogado</th>
@@ -86,19 +98,30 @@ export default {
     return { year: now.getFullYear(), month: now.getMonth(), lawyers: [], schedules: [], map: {}, _totalPages: 1,
       // pagination
       page: 1,
-      pageSize: (typeof this.pageSizeProp !== 'undefined' ? this.pageSizeProp : 25),
-      // start with only 25 available, expand on user request
-      pageSizes: [25],
+      pageSize: (typeof this.pageSizeProp !== 'undefined' ? this.pageSizeProp : 10),
+      // start with only 10 available, expand on user request
+      pageSizes: [10],
       expandedPageSizes: false,
       totalCount: 0,
       selectedCell: null
     };
   },
   computed: {
+    monthNames(){ return Array.from({length:12},(_,i)=> new Date(0,i).toLocaleString(undefined,{month:'long'})) },
+    yearOptions(){ const y = new Date().getFullYear(); return Array.from({length:11},(_,i)=> y-5+i) },
     daysInMonth(){ return new Date(this.year, this.month+1, 0).getDate(); },
     monthLabel(){ return new Date(this.year, this.month, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' }) },
     totalPages(){ return this._totalPages || 1; },
     pagedLawyers(){ return this.lawyers || []; }
+  },
+  mounted(){
+    // sync top and bottom scrolls
+    const top = this.$refs.topScroll;
+    const bottom = this.$refs.bottomScroll;
+    if(top && bottom){
+      top.addEventListener('scroll', ()=>{ bottom.scrollLeft = top.scrollLeft });
+      bottom.addEventListener('scroll', ()=>{ top.scrollLeft = bottom.scrollLeft });
+    }
   },
   created(){ this.fetchPage() },
   methods: {
@@ -107,7 +130,7 @@ export default {
       this.selectedCell = { lawyer, day, tasks };
     },
     expandPageSizes(){
-      this.pageSizes = [25,50,100];
+      this.pageSizes = [10,25,50,100];
       this.expandedPageSizes = true;
     },
     async fetchPage(){
@@ -138,6 +161,14 @@ export default {
         m[s.lawyerId][day].push(s);
       }
       this.map = m;
+      // adjust topInner width to match table width so top scrollbar works
+      this.$nextTick(()=>{
+        try{
+          const table = this.$refs.tableRef;
+          const topInner = this.$refs.topInner;
+          if(table && topInner) topInner.style.width = table.scrollWidth + 'px';
+        }catch(e){/* ignore */}
+      })
     },
     async changePageSize(size){
       if(typeof size !== 'undefined') this.pageSize = size;
