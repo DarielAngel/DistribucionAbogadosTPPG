@@ -7,7 +7,7 @@
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
         <label class="text-sm">Filas por página:</label>
-        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="border rounded px-2 py-1">
+        <select v-model.number="pageSize" @change="changePageSize()" class="border rounded px-2 py-1">
           <option v-for="s in pageSizes" :key="s" :value="s">{{ s }}</option>
         </select>
         <button v-if="!expandedPageSizes" class="text-sm text-blue-600 ml-2" @click="expandPageSizes">Más opciones</button>
@@ -45,7 +45,7 @@
     <div class="flex items-center justify-between mt-2">
       <div class="flex items-center gap-2">
         <label class="text-sm">Filas por página:</label>
-        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="border rounded px-2 py-1">
+        <select v-model.number="pageSize" @change="changePageSize()" class="border rounded px-2 py-1">
           <option v-for="s in pageSizes" :key="s + '-bottom'" :value="s">{{ s }}</option>
         </select>
         <button v-if="!expandedPageSizes" class="text-sm text-blue-600 ml-2" @click="expandPageSizes">Más opciones</button>
@@ -139,7 +139,11 @@ export default {
       }
       this.map = m;
     },
-    changePageSize(size){ this.pageSize = size; this.page = 1; this.fetchPage(); },
+    async changePageSize(size){
+      if(typeof size !== 'undefined') this.pageSize = size;
+      this.page = 1;
+      await this.fetchPage();
+    },
     async prevPage(){ if(this.page>1){ this.page--; await this.fetchPage(); } },
     async nextPage(){ if(this.page < this.totalPages){ this.page++; await this.fetchPage(); } }
   }
