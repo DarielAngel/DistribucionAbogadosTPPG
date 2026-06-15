@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/vue'
+import { render, screen, fireEvent, waitFor } from '@testing-library/vue'
 import LawyersList from '../src/components/LawyersList.vue'
 import axios from 'axios'
 
@@ -8,4 +8,29 @@ test('fetches and displays lawyers list', async () => {
   axios.get.mockResolvedValue({ data: [{ id: 1, name: 'Juan Perez', province: 'P', municipality: 'M', specialization: 'Civil' }] })
   render(LawyersList, { props: { token: 'fake' } })
   await waitFor(() => expect(screen.getByText('Juan Perez')).toBeInTheDocument())
+})
+
+describe('autocomplete with debounce', ()=>{
+  beforeEach(()=>{ vi.useFakeTimers(); vi.clearAllMocks() })
+  afterEach(()=>{ vi.useRealTimers() })
+
+  test('shows suggestions after debounce and calls API after delay', async ()=>{
+    const suggestionItems = { data: { items: [{ id:1, name:'Ana García', province:'Prov A', municipality:'M1' }] } }
+    const fullItems = { data: { items: [{ id:1, name:'Ana García' }, { id:2, name:'Pedro'}] } }
+    axios.get.mockResolvedValueOnce(suggestionItems).mockResolvedValueOnce(fullItems)
+
+    render(LawyersList, { props: { token: 't' } })
+    const input = screen.getByPlaceholderText(/Buscar por nombre/)
+
+    await fireEvent.update(input, 'Ana')
+    // before debounce
+    vi.advanceTimersByTime(200)
+    await Promise.resolve()
+    expect(axios.get).not.toHaveBeenCalled()
+
+    // after debounce
+    vi.advanceTimersByTime(200)
+    await waitFor(()=> expect(axios.get).toHaveBeenCalled())
+    await waitFor(()=> expect(screen.getByText('Ana García')).toBeInTheDocument())
+  })
 })

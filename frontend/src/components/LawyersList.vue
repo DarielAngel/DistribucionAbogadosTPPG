@@ -23,19 +23,29 @@ import axios from 'axios'
 export default {
   props: ['token'],
   data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1 } },
-  created(){ this.fetch() },
+  created(){ this.fetch(); this.debouncedQuery = this.debounce(this._doSearch, 300) },
   methods: {
+    debounce(fn, wait){
+      let t = null;
+      return function(...args){
+        if(t) clearTimeout(t);
+        t = setTimeout(()=> fn.apply(this, args), wait);
+      }
+    },
     async fetch(){
       const base = (import.meta.env.VITE_API_URL||'/api');
       const res = await axios.get(base + '/lawyers?page=1&pageSize=100', { headers: { Authorization: 'Bearer ' + this.token } });
       // API returns { items, total }
       this.lawyers = res.data.items || res.data;
     },
-    async onSearchInput(){
+    onSearchInput(){
       const q = this.q.trim();
-      const base = (import.meta.env.VITE_API_URL||'/api');
       if(q.length<1){ this.showSuggestions = false; this.suggestions = []; return this.fetch(); }
-      // fetch a small set for suggestions
+      this.debouncedQuery(q);
+    },
+    async _doSearch(q){
+      const base = (import.meta.env.VITE_API_URL||'/api');
+      // fetch suggestions
       try{
         const res = await axios.get(base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=8`, { headers: { Authorization: 'Bearer ' + this.token } });
         const items = res.data.items || res.data || [];
@@ -43,7 +53,7 @@ export default {
         this.showSuggestions = true;
         this.selectedSuggestionIndex = -1;
       }catch(e){ this.suggestions = []; this.showSuggestions = false }
-      // also update the full list (keeps behaviour similar to before)
+      // update full list
       try{
         const res2 = await axios.get(base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`, { headers: { Authorization: 'Bearer ' + this.token } });
         this.lawyers = res2.data.items || res2.data || [];
