@@ -23,10 +23,10 @@ describe('autocomplete with debounce', ()=>{
     const input = screen.getByPlaceholderText(/Buscar por nombre/)
 
     await fireEvent.update(input, 'Ana')
-    // before debounce
+    // before debounce: initial fetch from created() may have been called once
     vi.advanceTimersByTime(200)
     await Promise.resolve()
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(axios.get).toHaveBeenCalledTimes(1)
 
     // after debounce
     vi.advanceTimersByTime(200)

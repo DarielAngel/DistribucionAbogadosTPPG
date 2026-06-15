@@ -20,18 +20,13 @@
 
 <script>
 import axios from 'axios'
+import debounce from '../utils/debounce'
 export default {
   props: ['token'],
   data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1 } },
-  created(){ this.fetch(); this.debouncedQuery = this.debounce(this._doSearch, 300) },
+  created(){ this.fetch(); this.debouncedQuery = debounce(this._doSearch, 300) },
   methods: {
-    debounce(fn, wait){
-      let t = null;
-      return function(...args){
-        if(t) clearTimeout(t);
-        t = setTimeout(()=> fn.apply(this, args), wait);
-      }
-    },
+    // debounce moved to `src/utils/debounce.js`
     async fetch(){
       const base = (import.meta.env.VITE_API_URL||'/api');
       const res = await axios.get(base + '/lawyers?page=1&pageSize=100', { headers: { Authorization: 'Bearer ' + this.token } });
