@@ -35,7 +35,7 @@
       <table ref="tableRef" class="min-w-full table-fixed text-sm">
         <thead class="bg-gray-100 sticky top-0">
           <tr>
-            <th class="p-2 w-48">Abogado</th>
+            <th class="p-2 w-36">Abogado</th>
             <th v-for="d in daysInMonth" :key="d" class="p-1 text-center w-10">{{ d }}</th>
           </tr>
         </thead>
