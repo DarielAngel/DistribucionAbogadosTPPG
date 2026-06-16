@@ -15,9 +15,10 @@ describe('autocomplete with debounce', ()=>{
   afterEach(()=>{ vi.useRealTimers() })
 
   test('shows suggestions after debounce and calls API after delay', async ()=>{
-    const suggestionItems = { data: { items: [{ id:1, name:'Ana García', province:'Prov A', municipality:'M1' }] } }
-    const fullItems = { data: { items: [{ id:1, name:'Ana García' }, { id:2, name:'Pedro'}] } }
-    axios.get.mockResolvedValueOnce(suggestionItems).mockResolvedValueOnce(fullItems)
+      const initialItems = { data: { items: [{ id: 9, name: 'Initial One', province: 'P0', municipality: 'M0' }] } }
+      const suggestionItems = { data: { items: [{ id:1, name:'Ana García', province:'Prov A', municipality:'M1' }] } }
+      const fullItems = { data: { items: [{ id:1, name:'Ana García' }, { id:2, name:'Pedro'}] } }
+      axios.get.mockResolvedValueOnce(initialItems).mockResolvedValueOnce(suggestionItems).mockResolvedValueOnce(fullItems)
 
     render(LawyersList, { props: { token: 't' } })
     const input = screen.getByPlaceholderText(/Buscar por nombre/)

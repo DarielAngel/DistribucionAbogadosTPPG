@@ -24,12 +24,12 @@
 import LawyersList from './LawyersList.vue'
 import MonthSchedule from './MonthSchedule.vue'
 export default {
-  props: ['token'],
+  props: ['token','selectedLawyers'],
   components: { LawyersList, MonthSchedule },
-  data(){ return { activeLawyer: null, selectedLawyers: [], pageSize: 25 } },
+  data(){ return { activeLawyer: null, pageSize: 25 } },
   methods: {
-    onSelect(l){ this.activeLawyer = l },
-    onSelection(list){ this.selectedLawyers = list }
+    onSelect(l){ this.activeLawyer = l; this.$emit('select', l) },
+    onSelection(list){ this.$emit('selection', list) }
   }
 }
 </script>

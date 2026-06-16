@@ -32,7 +32,8 @@ export default {
     // debounce moved to `src/utils/debounce.js`
     async fetch(){
       const base = (import.meta.env.VITE_API_URL||'/api');
-      const res = await axios.get(base + '/lawyers?page=1&pageSize=100', { headers: { Authorization: 'Bearer ' + this.token } });
+      const url = base + '/lawyers?page=1&pageSize=100'
+      const res = await axios.get(url, { headers: { Authorization: 'Bearer ' + this.token } });
       // API returns { items, total }
       this.lawyers = res.data.items || res.data;
     },
@@ -45,7 +46,8 @@ export default {
       const base = (import.meta.env.VITE_API_URL||'/api');
       // fetch suggestions
       try{
-        const res = await axios.get(base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=8`, { headers: { Authorization: 'Bearer ' + this.token } });
+        const url1 = base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=8`
+        const res = await axios.get(url1, { headers: { Authorization: 'Bearer ' + this.token } });
         const items = res.data.items || res.data || [];
         this.suggestions = items.slice(0,8);
         this.showSuggestions = true;
@@ -53,7 +55,8 @@ export default {
       }catch(e){ this.suggestions = []; this.showSuggestions = false }
       // update full list
       try{
-        const res2 = await axios.get(base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`, { headers: { Authorization: 'Bearer ' + this.token } });
+        const url2 = base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`
+        const res2 = await axios.get(url2, { headers: { Authorization: 'Bearer ' + this.token } });
         this.lawyers = res2.data.items || res2.data || [];
       }catch(e){ /* ignore */ }
     },
