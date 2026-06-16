@@ -21,7 +21,7 @@
         <MonthSchedule :token="token" :page-size-prop="pageSize" :selected-lawyers="selectedLawyers" />
       </div>
     </div>
-    <ConfirmModal v-if="showConfirmDelete" :title="`Eliminar ${pendingDelete?.name}`" :message="`¿Eliminar al abogado ${pendingDelete?.name}? Esto eliminará también todas sus tareas.`" @confirm="onConfirmDelete" @cancel="showConfirmDelete=false" />
+    <ConfirmModal v-if="showConfirmDelete" :title="pendingDelete ? ('Eliminar ' + pendingDelete.name) : 'Eliminar'" :message="pendingDelete ? ('¿Eliminar al abogado ' + pendingDelete.name + '? Esto eliminará también todas sus tareas.') : '¿Confirmar? '" @confirm="onConfirmDelete" @cancel="showConfirmDelete=false" />
     <AddTaskModal v-if="showAddTask && activeLawyer" :lawyer="activeLawyer" :token="token" @added="onTaskAdded" @close="showAddTask=false" />
   </div>
 </template>
