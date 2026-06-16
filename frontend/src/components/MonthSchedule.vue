@@ -92,7 +92,7 @@
 <script>
 import axios from 'axios'
 export default {
-  props: ['token','pageSizeProp'],
+  props: ['token','pageSizeProp','selectedLawyers'],
   data(){
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth(), lawyers: [], schedules: [], map: {}, _totalPages: 1,
@@ -124,6 +124,9 @@ export default {
     }
   },
   created(){ this.fetchPage() },
+  watch: {
+    selectedLawyers: { handler(){ this.page = 1; this.fetchPage(); }, deep: true }
+  },
   methods: {
     onCellClick(lawyer, day){
       const tasks = (this.map[lawyer.id] && this.map[lawyer.id][day]) || [];
@@ -136,22 +139,54 @@ export default {
     async fetchPage(){
       const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
       const base = (import.meta.env.VITE_API_URL||'/api');
-      // fetch paged lawyers from API
+
+      // If a selection filter is active, use it as the source and paginate client-side
+      if(this.selectedLawyers && this.selectedLawyers.length){
+        const source = this.selectedLawyers;
+        this.totalCount = source.length;
+        this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+        const startIndex = (this.page - 1) * this.pageSize;
+        const visible = source.slice(startIndex, startIndex + this.pageSize);
+        this.lawyers = visible;
+
+        const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
+        const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
+        const ids = visible.map(l=>l.id).filter(Boolean).join(',');
+        const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
+        this.schedules = schedRes.data || [];
+
+        const m = {};
+        for(const s of this.schedules){
+          const ld = new Date(s.date);
+          const day = ld.getDate();
+          if(!m[s.lawyerId]) m[s.lawyerId] = {};
+          if(!m[s.lawyerId][day]) m[s.lawyerId][day] = [];
+          m[s.lawyerId][day].push(s);
+        }
+        this.map = m;
+        this.$nextTick(()=>{
+          try{
+            const table = this.$refs.tableRef;
+            const topInner = this.$refs.topInner;
+            if(table && topInner) topInner.style.width = table.scrollWidth + 'px';
+          }catch(e){/* ignore */}
+        })
+        return;
+      }
+
+      // Default: server-side paged lawyers
       const lawRes = await axios.get(base + `/lawyers?page=${this.page}&pageSize=${this.pageSize}`, { headers });
-      // API may return { items, total }
       this.lawyers = lawRes.data.items || lawRes.data || [];
       const total = (lawRes.data && lawRes.data.total) || (Array.isArray(lawRes.data) ? lawRes.data.length : 0);
       this.totalCount = total;
       this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
 
-      // fetch schedules only for visible lawyers
       const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
       const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
       const ids = this.lawyers.map(l=>l.id).filter(Boolean).join(',');
       const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
       this.schedules = schedRes.data || [];
 
-      // build map lawyerId -> day -> [schedules]
       const m = {};
       for(const s of this.schedules){
         const ld = new Date(s.date);
@@ -161,7 +196,6 @@ export default {
         m[s.lawyerId][day].push(s);
       }
       this.map = m;
-      // adjust topInner width to match table width so top scrollbar works
       this.$nextTick(()=>{
         try{
           const table = this.$refs.tableRef;

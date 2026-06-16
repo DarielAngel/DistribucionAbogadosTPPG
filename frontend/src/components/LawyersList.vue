@@ -10,9 +10,12 @@
       </ul>
     </div>
     <ul>
-      <li v-for="l in lawyers" :key="l.id" class="border p-2 mb-1 cursor-pointer hover:bg-red-50" @click="$emit('select', l)">
-        <div class="font-semibold text-sm">{{ l.name }}</div>
-        <div class="text-xs text-gray-600">{{ l.province }} - {{ l.municipality }} • {{ l.specialization }}</div>
+      <li v-for="l in lawyers" :key="l.id" :class="['border p-2 mb-1 cursor-pointer hover:bg-red-50 flex items-start', { 'bg-blue-50': selectedIds.includes(l.id) }]" @click="$emit('select', l)">
+        <input type="checkbox" class="mt-1 mr-3" :checked="selectedIds.includes(l.id)" @change.stop="toggleSelect(l)" />
+        <div>
+          <div class="font-semibold text-sm">{{ l.name }}</div>
+          <div class="text-xs text-gray-600">{{ l.province }} - {{ l.municipality }} • {{ l.specialization }}</div>
+        </div>
       </li>
     </ul>
   </div>
@@ -23,7 +26,7 @@ import axios from 'axios'
 import debounce from '../utils/debounce'
 export default {
   props: ['token'],
-  data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1 } },
+  data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1, selectedIds: [] } },
   created(){ this.fetch(); this.debouncedQuery = debounce(this._doSearch, 300) },
   methods: {
     // debounce moved to `src/utils/debounce.js`
@@ -80,6 +83,15 @@ export default {
       this.showSuggestions = false;
       this.suggestions = [];
       this.$emit('select', s);
+    }
+    ,
+    toggleSelect(l){
+      const id = l.id;
+      const idx = this.selectedIds.indexOf(id);
+      if(idx === -1) this.selectedIds.push(id);
+      else this.selectedIds.splice(idx,1);
+      const selected = this.lawyers.filter(x => this.selectedIds.includes(x.id));
+      this.$emit('selection', selected);
     }
   }
 }

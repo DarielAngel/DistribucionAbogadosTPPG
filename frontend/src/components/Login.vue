@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50">
     <div class="w-full max-w-4xl grid grid-cols-2 shadow-lg rounded overflow-hidden">
-      <div class="hidden md:block">
-        <div class="h-full w-full bg-cover bg-center" :style="`background-image: url(/images/login/hero-gradient-1.svg)`"></div>
+      <div class="hidden md:flex items-center justify-center bg-white p-8">
+        <img src="/images/login/logo.jpg" alt="Logo" class="max-h-96 object-contain w-full" />
       </div>
       <div class="p-8 bg-white flex items-center">
         <div class="w-full">
