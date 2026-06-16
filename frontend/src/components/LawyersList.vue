@@ -101,25 +101,9 @@ export default {
       const selected = this.lawyers.filter(x => this.selectedIds.includes(x.id));
       this.$emit('selection', selected);
     },
-    async confirmDelete(l){
-      if(!confirm(`¿Eliminar al abogado "${l.name}"? Esta acción no se puede deshacer.`)) return;
-      await this.deleteLawyer(l);
-    },
-    async deleteLawyer(l){
-      try{
-        const base = (import.meta.env.VITE_API_URL||'/api');
-        await axios.delete(base + `/lawyers/${l.id}`, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
-        // remove locally
-        this.lawyers = this.lawyers.filter(x => x.id !== l.id);
-        // clear selection if present
-        const sidx = this.selectedIds.indexOf(l.id);
-        if(sidx !== -1) this.selectedIds.splice(sidx, 1);
-        this.$emit('selection', this.lawyers.filter(x => this.selectedIds.includes(x.id)));
-        this.$emit('deleted', l.id);
-      }catch(err){
-        console.error(err);
-        alert('Error al eliminar: ' + (err.response && err.response.data && err.response.data.message ? err.response.data.message : err.message));
-      }
+    confirmDelete(l){
+      // ask parent to confirm and perform delete
+      this.$emit('request-delete', l);
     }
   }
 }

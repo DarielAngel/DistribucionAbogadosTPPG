@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Lawyer } = require('../models');
+const { Lawyer, Schedule } = require('../models');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // Create lawyer (admin only)
@@ -59,8 +59,14 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
 router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   const l = await Lawyer.findByPk(req.params.id);
   if(!l) return res.status(404).json({ message: 'Not found' });
-  await l.destroy();
-  res.json({ message: 'Deleted' });
+  try{
+    // remove schedules associated with lawyer first to ensure consistency
+    await Schedule.destroy({ where: { lawyerId: l.id } });
+    await l.destroy();
+    res.json({ message: 'Deleted' });
+  }catch(err){
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;
