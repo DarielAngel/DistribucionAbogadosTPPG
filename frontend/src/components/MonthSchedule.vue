@@ -151,10 +151,12 @@ export default {
         this.lawyers = visible;
 
         const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
-          const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
+        const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
         const ids = visible.map(l=>l.id).filter(Boolean).join(',');
-        const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
-        this.schedules = schedRes.data || [];
+        let schedRes;
+        try{ schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers }); }
+        catch(e){ schedRes = { data: [] } }
+        this.schedules = (schedRes && schedRes.data) ? schedRes.data : [];
 
         const m = {};
         for(const s of this.schedules){
@@ -176,17 +178,22 @@ export default {
       }
 
       // Default: server-side paged lawyers
-      const lawRes = await axios.get(base + `/lawyers?page=${this.page}&pageSize=${this.pageSize}`, { headers });
-      this.lawyers = lawRes.data.items || lawRes.data || [];
-      const total = (lawRes.data && lawRes.data.total) || (Array.isArray(lawRes.data) ? lawRes.data.length : 0);
+      let lawRes;
+      try{ lawRes = await axios.get(base + `/lawyers?page=${this.page}&pageSize=${this.pageSize}`, { headers }); }
+      catch(e){ lawRes = { data: [] } }
+      const lawData = (lawRes && lawRes.data) ? lawRes.data : [];
+      this.lawyers = (lawData && lawData.items) ? lawData.items : lawData || [];
+      const total = (lawData && lawData.total) || (Array.isArray(lawData) ? lawData.length : 0);
       this.totalCount = total;
       this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
 
       const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
       const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
       const ids = this.lawyers.map(l=>l.id).filter(Boolean).join(',');
-      const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
-      this.schedules = schedRes.data || [];
+      let schedRes2;
+      try{ schedRes2 = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers }); }
+      catch(e){ schedRes2 = { data: [] } }
+      this.schedules = (schedRes2 && schedRes2.data) ? schedRes2.data : [];
 
       const m = {};
       for(const s of this.schedules){

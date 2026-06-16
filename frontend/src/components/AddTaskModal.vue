@@ -17,14 +17,14 @@
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm font-medium">Descripción <span class="text-red-600">*</span></label>
-            <input v-model="task.description" required placeholder="Breve descripción de la tarea" class="border p-2 w-full rounded" />
+            <label for="task-description" class="block text-sm font-medium">Descripción <span class="text-red-600">*</span></label>
+            <input id="task-description" v-model="task.description" required placeholder="Breve descripción de la tarea" class="border p-2 w-full rounded" />
           </div>
           <div>
-            <label class="block text-sm font-medium">Categoría</label>
-            <select v-model="task.category" class="border p-2 w-full rounded">
+            <label for="task-category" class="block text-sm font-medium">Categoría</label>
+            <select id="task-category" v-model="task.category" class="border p-2 w-full rounded">
               <option value="">(ninguna)</option>
               <option>Administrativo</option>
               <option>Civil</option>
@@ -33,20 +33,20 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium">Fecha inicio <span class="text-red-600">*</span></label>
-            <input v-model="task.startDate" type="date" required class="border p-2 w-full rounded" />
+            <label for="task-startDate" class="block text-sm font-medium">Fecha inicio <span class="text-red-600">*</span></label>
+            <input id="task-startDate" v-model="task.startDate" type="date" required class="border p-2 w-full rounded" />
           </div>
           <div>
-            <label class="block text-sm font-medium">Fecha fin <span class="text-red-600">*</span></label>
-            <input v-model="task.endDate" type="date" required class="border p-2 w-full rounded" />
+            <label for="task-endDate" class="block text-sm font-medium">Fecha fin <span class="text-red-600">*</span></label>
+            <input id="task-endDate" v-model="task.endDate" type="date" required class="border p-2 w-full rounded" />
           </div>
           <div>
-            <label class="block text-sm font-medium">Hora inicio</label>
-            <input v-model="task.startTime" type="time" class="border p-2 w-full rounded" />
+            <label for="task-startTime" class="block text-sm font-medium">Hora inicio</label>
+            <input id="task-startTime" v-model="task.startTime" type="time" class="border p-2 w-full rounded" />
           </div>
           <div>
-            <label class="block text-sm font-medium">Hora fin</label>
-            <input v-model="task.endTime" type="time" class="border p-2 w-full rounded" />
+            <label for="task-endTime" class="block text-sm font-medium">Hora fin</label>
+            <input id="task-endTime" v-model="task.endTime" type="time" class="border p-2 w-full rounded" />
           </div>
         </div>
 
