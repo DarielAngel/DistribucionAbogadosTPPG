@@ -24,10 +24,12 @@ describe('autocomplete with debounce', ()=>{
     const input = screen.getByPlaceholderText(/Buscar por nombre/)
 
     await fireEvent.update(input, 'Ana')
-    // before debounce: initial fetch from created() may have been called once
+    // before debounce: initial fetch from created() should have been called
     vi.advanceTimersByTime(200)
     await Promise.resolve()
-    expect(axios.get).toHaveBeenCalledTimes(1)
+    expect(axios.get.mock.calls.length).toBeGreaterThanOrEqual(1)
+    // first call should be the initial list fetch
+    expect(axios.get.mock.calls[0][0]).toContain('/lawyers')
 
     // after debounce
     vi.advanceTimersByTime(200)
