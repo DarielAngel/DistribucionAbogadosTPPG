@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded shadow-lg w-11/12 max-w-2xl p-4 max-h-[90vh] overflow-auto">
+    <div class="bg-white text-black rounded shadow-lg w-11/12 max-w-2xl p-4 max-h-[90vh] overflow-auto">
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-lg font-medium">Adicionar abogado</h3>
         <button class="text-gray-500" @click="$emit('close')">✕</button>

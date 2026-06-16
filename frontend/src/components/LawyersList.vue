@@ -1,15 +1,20 @@
 <template>
   <div>
-    <div class="mb-2 relative">
-      <input v-model="q" placeholder="Buscar por nombre/provincia/municipio" class="border p-2 w-full" @input="onSearchInput" @keydown="onKeyDown" @blur="onBlur" />
-      <ul v-if="showSuggestions && suggestions.length" class="absolute left-0 right-0 bg-white border mt-1 z-50 max-h-56 overflow-auto">
-        <li v-for="(s, idx) in suggestions" :key="s.id" :class="['px-3 py-2 cursor-pointer hover:bg-gray-100', { 'bg-gray-100': idx===selectedSuggestionIndex } ]" @mousedown.prevent="selectSuggestion(s)">
-          <div class="font-medium text-sm">{{ s.name }}</div>
-          <div class="text-xs text-gray-600">{{ s.province }} - {{ s.municipality }}</div>
-        </li>
-      </ul>
+    <div class="mb-2 flex items-start gap-2">
+      <div class="relative flex-1">
+        <input v-model="q" placeholder="Buscar por nombre/provincia/municipio" class="border p-2 w-full" @input="onSearchInput" @keydown="onKeyDown" @blur="onBlur" />
+        <ul v-if="showSuggestions && suggestions.length" class="absolute left-0 right-0 bg-white text-black border mt-1 z-50 max-h-56 overflow-auto">
+          <li v-for="(s, idx) in suggestions" :key="s.id" :class="['px-3 py-2 cursor-pointer hover:bg-gray-100', { 'bg-gray-100': idx===selectedSuggestionIndex } ]" @mousedown.prevent="selectSuggestion(s)">
+            <div class="font-medium text-sm">{{ s.name }}</div>
+            <div class="text-xs text-gray-600">{{ s.province }} - {{ s.municipality }}</div>
+          </li>
+        </ul>
+      </div>
+      <div class="flex items-center" v-if="!compact">
+        <button class="px-3 py-1 border rounded bg-white text-sm" @click="fetch" :disabled="loading">{{ loading ? 'Cargando...' : 'Refrescar' }}</button>
+      </div>
     </div>
-    <ul>
+    <ul v-if="!compact">
       <li v-for="l in lawyers" :key="l.id" :class="['border p-2 mb-1 hover:bg-red-50', { 'bg-blue-50': selectedIds.includes(l.id) } ]">
         <div class="flex items-start">
           <input type="checkbox" class="mt-1 mr-3" :checked="selectedIds.includes(l.id)" @change.stop="toggleSelect(l)" />
@@ -30,21 +35,25 @@
 import axios from 'axios'
 import debounce from '../utils/debounce'
 export default {
-  props: { token: String, isAdmin: { type: Boolean, default: false } },
-  data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1, selectedIds: [] } },
-  created(){ this.fetch(); this.debouncedQuery = debounce(this._doSearch, 300) },
+  props: { token: String, isAdmin: { type: Boolean, default: false }, compact: { type: Boolean, default: false } },
+  data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1, selectedIds: [], loading: false } },
+  created(){ if(!this.compact) this.fetch(); this.debouncedQuery = debounce(this._doSearch, 300) },
   methods: {
     // debounce moved to `src/utils/debounce.js`
     async fetch(){
-      const base = (import.meta.env.VITE_API_URL||'/api');
-      const url = base + '/lawyers?page=1&pageSize=100'
-      const res = await axios.get(url, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
-      // API returns { items, total }
-      this.lawyers = res.data.items || res.data;
+      if(this.compact) return;
+      try{
+        this.loading = true;
+        const base = (import.meta.env.VITE_API_URL||'/api');
+        const url = base + '/lawyers?page=1&pageSize=100'
+        const res = await axios.get(url, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        // API returns { items, total }
+        this.lawyers = res.data.items || res.data;
+      }finally{ this.loading = false }
     },
     onSearchInput(){
       const q = this.q.trim();
-      if(q.length<1){ this.showSuggestions = false; this.suggestions = []; return this.fetch(); }
+      if(q.length<1){ this.showSuggestions = false; this.suggestions = []; if(!this.compact) return this.fetch(); return; }
       this.debouncedQuery(q);
     },
     async _doSearch(q){
@@ -58,7 +67,8 @@ export default {
         this.showSuggestions = true;
         this.selectedSuggestionIndex = -1;
       }catch(e){ this.suggestions = []; this.showSuggestions = false }
-      // update full list
+      // update full list (only when not compact)
+      if(this.compact) return;
       try{
         const url2 = base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`
         const res2 = await axios.get(url2, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });

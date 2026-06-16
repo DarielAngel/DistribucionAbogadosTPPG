@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded shadow-lg w-11/12 max-w-2xl p-4 max-h-[90vh] overflow-auto">
+    <div class="bg-white text-black rounded shadow-lg w-11/12 max-w-2xl p-4 max-h-[90vh] overflow-auto">
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-lg font-medium">{{ headerTitle }}</h3>
         <button class="text-gray-500" @click="$emit('close')">✕</button>
@@ -10,13 +10,13 @@
         <div class="space-y-3">
           <div v-if="!lawyer">
             <label class="block text-sm font-medium">Abogado <span class="text-red-600">*</span></label>
-            <LawyersList :token="token" @select="onChooseLawyer" />
+            <LawyersList :token="token" @select="onChooseLawyer" :compact="true" />
             <div v-if="selectedLawyer" class="mt-2 p-2 border rounded bg-gray-50">
               <div class="font-medium">{{ selectedLawyer.name }}</div>
               <div class="text-xs text-gray-600">{{ selectedLawyer.province }} — {{ selectedLawyer.municipality }}</div>
             </div>
           </div>
-        
+        </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium">Descripción <span class="text-red-600">*</span></label>

@@ -18,7 +18,7 @@
       </div>
       <div class="col-span-2">
         <h3 class="font-medium">Cronograma</h3>
-        <MonthSchedule :token="token" :page-size-prop="pageSize" :selected-lawyers="selectedLawyers" />
+        <MonthSchedule ref="monthSchedule" :token="token" :page-size-prop="pageSize" :selected-lawyers="selectedLawyers" />
       </div>
     </div>
     <ConfirmModal v-if="showConfirmDelete" :title="pendingDelete ? ('Eliminar ' + pendingDelete.name) : 'Eliminar'" :message="pendingDelete ? ('¿Eliminar al abogado ' + pendingDelete.name + '? Esto eliminará también todas sus tareas.') : '¿Confirmar? '" @confirm="onConfirmDelete" @cancel="showConfirmDelete=false" />
@@ -61,11 +61,17 @@ export default {
       }
     },
     openAddTask(){ if(this.activeLawyer) this.showAddTask = true },
-    onTaskAdded(){
+    async onTaskAdded(){
       showToast('Tarea añadida', 'success');
-      // notify parent to refresh schedule view
+      // refresh lawyers list and month schedule so UI reflects DB changes
+      if(this.$refs.lawyersList && this.$refs.lawyersList.fetch) await this.$refs.lawyersList.fetch();
+      if(this.$refs.monthSchedule && this.$refs.monthSchedule.reload) await this.$refs.monthSchedule.reload();
       this.$emit('task-added');
-      // optionally refresh month schedule by emitting selection again
+    },
+    // public helper to refresh both views (used by parent App when a lawyer is added from header)
+    async refreshAll(){
+      if(this.$refs.lawyersList && this.$refs.lawyersList.fetch) await this.$refs.lawyersList.fetch();
+      if(this.$refs.monthSchedule && this.$refs.monthSchedule.reload) await this.$refs.monthSchedule.reload();
     }
   }
   ,watch: {

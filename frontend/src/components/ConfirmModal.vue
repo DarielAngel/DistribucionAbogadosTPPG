@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-40">
-    <div class="bg-white rounded shadow-lg w-11/12 max-w-md p-4">
+    <div class="bg-white text-black rounded shadow-lg w-11/12 max-w-md p-4">
       <div class="mb-3">
         <h3 class="text-lg font-semibold">{{ title }}</h3>
         <p class="text-sm text-gray-600 mt-1">{{ message }}</p>

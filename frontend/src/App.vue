@@ -6,7 +6,7 @@
       <h1 class="text-2xl font-bold mb-4">Provincia Abogados</h1>
       <Login v-if="!token" @login="onLogin" />
       <div v-else>
-        <AdminDashboard v-if="isAdmin && !showAdminView" :key="'admin-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" :is-admin="isAdmin" :open-add-task-signal="openAddTaskSignal" @selection="onFilter" @lawyer-deleted="onLawyerDeleted" @task-added="onTaskAdded" />
+        <AdminDashboard ref="adminDashboard" v-if="isAdmin && !showAdminView" :key="'admin-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" :is-admin="isAdmin" :open-add-task-signal="openAddTaskSignal" @selection="onFilter" @lawyer-deleted="onLawyerDeleted" @task-added="onTaskAdded" />
         <MonthSchedule v-else :key="'ms-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" />
       </div>
     </div>
@@ -44,10 +44,11 @@ export default {
       this.showAdminView = false;
     },
     onEdit(){ if(this.isAdmin) this.showAdminView = true },
-    onLawyerAdded(l){
-      // force remount of admin components so they refetch lists
+    async onLawyerAdded(l){
+      // keep admin dashboard visible and refresh its data
       this.adminKey += 1;
-      this.showAdminView = true;
+      this.showAdminView = false;
+      this.$nextTick(()=>{ if(this.$refs.adminDashboard && this.$refs.adminDashboard.refreshAll) this.$refs.adminDashboard.refreshAll(); });
     },
     onTaskAdded(){ this.adminKey += 1 },
     onLawyerDeleted(){ this.adminKey += 1 },

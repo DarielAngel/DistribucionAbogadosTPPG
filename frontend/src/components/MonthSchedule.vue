@@ -3,14 +3,15 @@
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-medium">Cronograma del mes</h3>
       <div class="flex items-center gap-3">
-        <div class="text-sm text-gray-600">{{ monthLabel }}</div>
-        <select v-model.number="month" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
-          <option v-for="(m,i) in monthNames" :key="i" :value="i">{{ m }}</option>
-        </select>
-        <select v-model.number="year" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
-          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-        </select>
-      </div>
+          <div class="text-sm text-gray-600">{{ monthLabel }}</div>
+          <select v-model.number="month" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+            <option v-for="(m,i) in monthNames" :key="i" :value="i">{{ m }}</option>
+          </select>
+          <select v-model.number="year" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+          </select>
+          <button class="px-2 py-1 border rounded bg-white text-sm" @click="fetchPage">Refrescar</button>
+        </div>
     </div>
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
@@ -150,7 +151,7 @@ export default {
         this.lawyers = visible;
 
         const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
-        const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
+          const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
         const ids = visible.map(l=>l.id).filter(Boolean).join(',');
         const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers });
         this.schedules = schedRes.data || [];
@@ -203,6 +204,10 @@ export default {
           if(table && topInner) topInner.style.width = table.scrollWidth + 'px';
         }catch(e){/* ignore */}
       })
+    },
+    async reload(){
+      this.page = 1;
+      await this.fetchPage();
     },
     async changePageSize(size){
       if(typeof size !== 'undefined') this.pageSize = size;
