@@ -4,7 +4,7 @@
     <div class="grid grid-cols-3 gap-4">
       <div>
         <h3 class="font-medium">Gestión de abogados</h3>
-        <LawyersList :token="token" @select="onSelect" @selection="onSelection" />
+        <LawyersList :token="token" :is-admin="isAdmin" @select="onSelect" @selection="onSelection" @deleted="onDeleted" />
         <div v-if="activeLawyer" class="mt-4 border p-3 bg-white shadow-sm">
           <div class="font-semibold">{{ activeLawyer.name }}</div>
           <div class="text-sm text-gray-600">{{ activeLawyer.province }} — {{ activeLawyer.municipality }}</div>
@@ -24,12 +24,13 @@
 import LawyersList from './LawyersList.vue'
 import MonthSchedule from './MonthSchedule.vue'
 export default {
-  props: ['token','selectedLawyers'],
+  props: ['token','selectedLawyers','isAdmin'],
   components: { LawyersList, MonthSchedule },
   data(){ return { activeLawyer: null, pageSize: 25 } },
-  methods: {
+  methods:{
     onSelect(l){ this.activeLawyer = l; this.$emit('select', l) },
-    onSelection(list){ this.$emit('selection', list) }
+    onSelection(list){ this.$emit('selection', list) },
+    onDeleted(id){ if(this.activeLawyer && this.activeLawyer.id === id) this.activeLawyer = null }
   }
 }
 </script>

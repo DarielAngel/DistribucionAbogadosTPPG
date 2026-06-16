@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-bold mb-4">Provincia Abogados</h1>
       <Login v-if="!token" @login="onLogin" />
       <div v-else>
-        <AdminDashboard v-if="isAdmin && !showAdminView" :key="'admin-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" @selection="onFilter" />
+        <AdminDashboard v-if="isAdmin && !showAdminView" :key="'admin-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" :is-admin="isAdmin" @selection="onFilter" />
         <MonthSchedule v-else :key="'ms-'+adminKey" :token="token" :selected-lawyers="selectedLawyers" />
       </div>
     </div>
