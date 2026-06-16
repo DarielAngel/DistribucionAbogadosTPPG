@@ -22,7 +22,7 @@
       </div>
     </div>
     <ConfirmModal v-if="showConfirmDelete" :title="pendingDelete ? ('Eliminar ' + pendingDelete.name) : 'Eliminar'" :message="pendingDelete ? ('¿Eliminar al abogado ' + pendingDelete.name + '? Esto eliminará también todas sus tareas.') : '¿Confirmar? '" @confirm="onConfirmDelete" @cancel="showConfirmDelete=false" />
-    <AddTaskModal v-if="showAddTask && activeLawyer" :lawyer="activeLawyer" :token="token" @added="onTaskAdded" @close="showAddTask=false" />
+    <AddTaskModal v-if="showAddTask" :lawyer="activeLawyer" :token="token" @added="onTaskAdded" @close="showAddTask=false" />
   </div>
 </template>
 
@@ -35,9 +35,9 @@ import axios from 'axios'
 import { showToast } from '../utils/toast'
 
 export default {
-  props: ['token','selectedLawyers','isAdmin'],
+  props: ['token','selectedLawyers','isAdmin','openAddTaskSignal'],
   components: { LawyersList, MonthSchedule, ConfirmModal, AddTaskModal },
-  data(){ return { activeLawyer: null, pageSize: 25, pendingDelete: null, showConfirmDelete:false, showAddTask:false } },
+  data(){ return { activeLawyer: null, pageSize: 25, pendingDelete: null, showConfirmDelete:false, showAddTask:false, _lastOpenAddTaskSignal: null } },
   methods:{
     onSelect(l){ this.activeLawyer = l; this.$emit('select', l) },
     onSelection(list){ this.$emit('selection', list) },
@@ -66,6 +66,16 @@ export default {
       // notify parent to refresh schedule view
       this.$emit('task-added');
       // optionally refresh month schedule by emitting selection again
+    }
+  }
+  ,watch: {
+    openAddTaskSignal(newVal){
+      if(!newVal) return;
+      if(this._lastOpenAddTaskSignal === newVal) return;
+      this._lastOpenAddTaskSignal = newVal;
+      // open add task modal without preselected lawyer
+      this.activeLawyer = null;
+      this.showAddTask = true;
     }
   }
 }

@@ -6,7 +6,7 @@
         <p class="text-sm text-gray-600 mt-1">{{ message }}</p>
       </div>
       <div class="flex justify-end gap-2">
-        <button class="px-3 py-2 border rounded" @click="$emit('cancel')">Cancelar</button>
+        <button class="px-3 py-2 border rounded bg-gray-100" @click="$emit('cancel')">Cancelar</button>
         <button class="px-3 py-2 bg-red-600 text-white rounded" @click="$emit('confirm')">Eliminar</button>
       </div>
     </div>

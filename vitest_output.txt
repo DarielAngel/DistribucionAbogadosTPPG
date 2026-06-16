@@ -1,0 +1,33 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mc:/workspace/frontend[39m
+
+ [32m✓[39m tests/LawyersList.search.test.js[2m > [22mLawyersList search (partial matches)[2m > [22mshows results when searching by partial name
+ [32m✓[39m tests/LawyersList.search.test.js[2m > [22mLawyersList search (partial matches)[2m > [22mshows results when searching by partial municipality or province
+ [32m✓[39m tests/LawyersList.test.js[2m > [22mfetches and displays lawyers list
+ [31m×[39m tests/LawyersList.test.js[2m > [22mautocomplete with debounce[2m > [22mshows suggestions after debounce and calls API after delay
+[31m   → expected "wrap" to be called 1 times, but got 2 times[39m
+ [32m✓[39m tests/filter.integration.test.js[2m > [22mHeaderBar emits filter when LawyersList emits selection (client)
+ [32m✓[39m tests/filter.integration.test.js[2m > [22mHeaderBar emits filter when LawyersList emits selection (admin)
+ [32m✓[39m tests/debounce.test.js[2m > [22mdebounce util[2m > [22mdebounces multiple calls into one
+ [32m✓[39m tests/debounce.test.js[2m > [22mdebounce util[2m > [22mforwards arguments and preserves context
+ [32m✓[39m tests/debounce.test.js[2m > [22mdebounce util[2m > [22mcancel prevents the call
+ [32m✓[39m tests/debounce.test.js[2m > [22mdebounce util[2m > [22mflush forces immediate call
+ [32m✓[39m tests/Login.test.js[2m > [22msubmits credentials and emits login
+ [32m✓[39m tests/AdminDashboard.test.js[2m > [22mrenders lawyers list and calendar entries in admin dashboard[33m 304[2mms[22m[39m
+ [32m✓[39m tests/CalendarView.test.js[2m > [22mdisplays schedules for selected date
+ [32m✓[39m tests/App.test.js[2m > [22mrenders header and login form when not authenticated
+
+[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 1 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m tests/LawyersList.test.js[2m > [22mautocomplete with debounce[2m > [22mshows suggestions after debounce and calls API after delay
+[31m[1mAssertionError[22m: expected "wrap" to be called 1 times, but got 2 times[39m
+[90m [2m❯[22m tests/LawyersList.test.js:[2m30:23[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m7 passed[39m[22m[90m (8)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m13 passed[39m[22m[90m (14)[39m
+[2m   Start at [22m 17:02:09
+[2m   Duration [22m 16.57s[2m (transform 1.01s, setup 3.27s, collect 14.30s, tests 983ms, environment 16.99s, prepare 4.62s)[22m
+
