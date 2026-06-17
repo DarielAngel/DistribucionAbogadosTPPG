@@ -18,16 +18,11 @@ jobs:
           node-version: '18'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         with:
           version: '9'
 
-      - name: Install backend dependencies
-        working-directory: backend
-        run: pnpm install --frozen-lockfile
-
-      - name: Install frontend dependencies
-        working-directory: frontend
+      - name: Install dependencies (root)
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
