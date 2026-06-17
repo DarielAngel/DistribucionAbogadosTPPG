@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20' # 👈 Actualizado de 18 a 20 para mantener consistencia
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3

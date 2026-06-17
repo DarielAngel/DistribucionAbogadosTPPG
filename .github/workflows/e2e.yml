@@ -16,7 +16,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20' # 👈 Actualizado de 18 a 20
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -44,8 +44,8 @@ jobs:
 
       - name: Wait for services
         run: |
-          # Wait up to 2 minutes for both frontend and backend to be available
-          npx wait-on --timeout 120000 http://localhost:5173 http://localhost:4000/api/lawyers
+          # Espera hasta 2 minutos a que el frontend y la raíz del backend respondan
+          npx wait-on --timeout 120000 http://localhost:5173 http-get://localhost:4000
 
       - name: Run Playwright E2E
         working-directory: frontend
