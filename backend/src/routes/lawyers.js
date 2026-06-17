@@ -7,6 +7,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 router.post('/', authenticate, authorize('admin'), async (req, res) => {
   try{
     const l = await Lawyer.create(req.body);
+    // broadcast event
+    try{ require('../events').sendEvent('lawyer:created', l); }catch(e){/* ignore */}
     res.json(l);
   }catch(err){
     res.status(500).json({ message: err.message });
@@ -63,6 +65,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
     // remove schedules associated with lawyer first to ensure consistency
     await Schedule.destroy({ where: { lawyerId: l.id } });
     await l.destroy();
+    try{ require('../events').sendEvent('lawyer:deleted', { id: l.id }); }catch(e){}
     res.json({ message: 'Deleted' });
   }catch(err){
     res.status(500).json({ message: err.message });

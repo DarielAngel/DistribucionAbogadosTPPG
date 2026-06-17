@@ -40,14 +40,20 @@
 
 <script>
 import axios from 'axios'
+import { baseUrl } from '../utils/apiClient'
 export default {
   data(){ return { email: '', password: '' } },
   methods: {
     async submit(){
-      const res = await axios.post((import.meta.env.VITE_API_URL||'/api') + '/auth/login', { email: this.email, password: this.password });
-      const token = res.data.token;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      this.$emit('login', { token, role: payload.role });
+      try{
+        const res = await axios.post(baseUrl('/auth/login'), { email: this.email, password: this.password });
+        const token = res.data.token;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        this.$emit('login', { token, role: payload.role });
+      }catch(e){
+        // emit no login on error; caller/show UI should handle
+        this.$emit('login-error', e);
+      }
     }
   }
 }

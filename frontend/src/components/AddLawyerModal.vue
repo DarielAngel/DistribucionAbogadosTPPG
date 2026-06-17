@@ -54,6 +54,7 @@
 <script>
 import axios from 'axios'
 import { showToast } from '../utils/toast'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
 export default {
   props: ['token'],
   data(){
@@ -78,7 +79,7 @@ export default {
         this.saving = true;
         const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
         // create lawyer
-        const lawRes = await axios.post((import.meta.env.VITE_API_URL||'/api') + '/lawyers', this.lawyer, { headers });
+        const lawRes = await axios.post(baseUrl('/lawyers'), this.lawyer, { headers: buildHeaders(this.token) });
         const createdLawyer = lawRes.data;
 
         this.successMessage = 'Abogado creado correctamente';

@@ -32,6 +32,7 @@ import MonthSchedule from './MonthSchedule.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import AddTaskModal from './AddTaskModal.vue'
 import axios from 'axios'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
 import { showToast } from '../utils/toast'
 
 export default {
@@ -46,8 +47,7 @@ export default {
     async onConfirmDelete(){
       if(!this.pendingDelete) return;
       try{
-        const base = (import.meta.env.VITE_API_URL||'/api');
-        await axios.delete(base + `/lawyers/${this.pendingDelete.id}`, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        await axios.delete(baseUrl(`/lawyers/${this.pendingDelete.id}`), { headers: buildHeaders(this.token) });
         showToast('Abogado eliminado', 'success');
         // refresh list
         if(this.$refs.lawyersList && this.$refs.lawyersList.fetch) await this.$refs.lawyersList.fetch();

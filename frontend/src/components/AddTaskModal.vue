@@ -65,6 +65,7 @@
 <script>
 import axios from 'axios'
 import { showToast } from '../utils/toast'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
 import LawyersList from './LawyersList.vue'
 export default {
   props: { lawyer: { type: Object, required: false }, token: String },
@@ -84,7 +85,7 @@ export default {
       if(!this.canSave) return;
       try{
         this.saving = true;
-        const base = (import.meta.env.VITE_API_URL||'/api');
+        const base = baseUrl('');
         const payload = {
           type: 'task',
           lawyerId: this.effectiveLawyer.id,
@@ -95,7 +96,7 @@ export default {
           startTime: this.task.startTime || null,
           endTime: this.task.endTime || null
         };
-        await axios.post(base + '/schedules', payload, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        await axios.post(baseUrl('/schedules'), payload, { headers: buildHeaders(this.token) });
         showToast('Tarea creada', 'success');
         this.$emit('added');
         this.$emit('close');

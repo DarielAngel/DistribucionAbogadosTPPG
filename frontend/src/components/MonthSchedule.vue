@@ -10,7 +10,7 @@
           <select v-model.number="year" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
             <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
           </select>
-          <button class="px-2 py-1 border rounded bg-white text-sm" @click="fetchPage">Refrescar</button>
+          <button type="button" class="px-2 py-1 border rounded bg-white text-sm" @click="reload">Refrescar</button>
         </div>
     </div>
     <div class="flex items-center justify-between mb-2">
@@ -81,7 +81,11 @@
       <div class="text-sm text-gray-700"><strong>Tarea:</strong>
         <div v-if="selectedCell.tasks && selectedCell.tasks.length">
           <ul class="list-disc pl-5 mt-1">
-            <li v-for="t in selectedCell.tasks" :key="t.id">{{ t.type || t.description || 'Tarea sin título' }} — {{ t.startTime || 'hora no especificada' }}</li>
+            <li v-for="t in selectedCell.tasks" :key="t.id" class="mb-2 text-left">
+              <div class="font-medium">{{ t.description || t.type || 'Tarea sin título' }}</div>
+              <div class="text-xs text-gray-600">{{ t.category ? (t.category + ' • ') : '' }}{{ t.startTime ? t.startTime : '' }}{{ t.startTime && t.endTime ? (' - ' + t.endTime) : (t.endTime ? (' - ' + t.endTime) : '') }}</div>
+              <div class="text-xs text-gray-500">Asignado a: {{ (t.Lawyer && t.Lawyer.name) || selectedCell.lawyer.name }}</div>
+            </li>
           </ul>
         </div>
         <div v-else class="text-gray-500 mt-1">Ninguna tarea</div>
@@ -92,15 +96,25 @@
 
 <script>
 import axios from 'axios'
+import sse from '../utils/sse'
+import debounce from '../utils/debounce'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
+import { sortByName } from '../utils/sort'
+
 export default {
   props: ['token','pageSizeProp','selectedLawyers'],
   data(){
     const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth(), lawyers: [], schedules: [], map: {}, _totalPages: 1,
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      lawyers: [],
+      schedules: [],
+      map: {},
+      _totalPages: 1,
       // pagination
       page: 1,
       pageSize: (typeof this.pageSizeProp !== 'undefined' ? this.pageSizeProp : 10),
-      // start with only 10 available, expand on user request
       pageSizes: [10],
       expandedPageSizes: false,
       totalCount: 0,
@@ -115,6 +129,10 @@ export default {
     totalPages(){ return this._totalPages || 1; },
     pagedLawyers(){ return this.lawyers || []; }
   },
+  created(){
+    this.reloadDebounced = debounce(()=> this.reload(), 200);
+    this.fetchPage();
+  },
   mounted(){
     // sync top and bottom scrolls
     const top = this.$refs.topScroll;
@@ -123,8 +141,32 @@ export default {
       top.addEventListener('scroll', ()=>{ bottom.scrollLeft = top.scrollLeft });
       bottom.addEventListener('scroll', ()=>{ top.scrollLeft = bottom.scrollLeft });
     }
+
+    // SSE handlers to keep schedule in sync
+    this._onScheduleCreated = (e) => { this._handleScheduleEvent(e && e.detail ? e.detail : e); };
+    this._onScheduleUpdated = (e) => { this._handleScheduleEvent(e && e.detail ? e.detail : e); };
+    this._onScheduleDeleted = (e) => { this._handleScheduleDeleted(e && e.detail ? e.detail : e); };
+    this._onLawyerCreated = (e) => { const l = e && e.detail ? e.detail : e; if(l && l.id) this.reloadDebounced(); };
+
+    try{
+      if(sse && sse.addEventListener){
+        sse.addEventListener('schedule:created', this._onScheduleCreated);
+        sse.addEventListener('schedule:updated', this._onScheduleUpdated);
+        sse.addEventListener('schedule:deleted', this._onScheduleDeleted);
+        sse.addEventListener('lawyer:created', this._onLawyerCreated);
+      }
+    }catch(e){ /* ignore */ }
   },
-  created(){ this.fetchPage() },
+  beforeUnmount(){
+    try{
+      if(sse && sse.removeEventListener){
+        sse.removeEventListener('schedule:created', this._onScheduleCreated);
+        sse.removeEventListener('schedule:updated', this._onScheduleUpdated);
+        sse.removeEventListener('schedule:deleted', this._onScheduleDeleted);
+        sse.removeEventListener('lawyer:created', this._onLawyerCreated);
+      }
+    }catch(e){/* ignore */}
+  },
   watch: {
     selectedLawyers: { handler(){ this.page = 1; this.fetchPage(); }, deep: true }
   },
@@ -133,10 +175,7 @@ export default {
       const tasks = (this.map[lawyer.id] && this.map[lawyer.id][day]) || [];
       this.selectedCell = { lawyer, day, tasks };
     },
-    expandPageSizes(){
-      this.pageSizes = [10,25,50,100];
-      this.expandedPageSizes = true;
-    },
+    expandPageSizes(){ this.pageSizes = [10,25,50,100]; this.expandedPageSizes = true; },
     async fetchPage(){
       const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
       const base = (import.meta.env.VITE_API_URL||'/api');
@@ -149,14 +188,15 @@ export default {
         const startIndex = (this.page - 1) * this.pageSize;
         const visible = source.slice(startIndex, startIndex + this.pageSize);
         this.lawyers = visible;
+        try{ this.lawyers = (this.lawyers || []).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)) ); }catch(e){}
 
-        const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
-        const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
-        const ids = visible.map(l=>l.id).filter(Boolean).join(',');
-        let schedRes;
-        try{ schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers }); }
-        catch(e){ schedRes = { data: [] } }
-        this.schedules = (schedRes && schedRes.data) ? schedRes.data : [];
+          const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
+          const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
+          const ids = visible.map(l=>l.id).filter(Boolean).join(',');
+          let schedRes;
+          try{ schedRes = await axios.get(baseUrl(`/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : '')), { headers: buildHeaders(this.token) }); }
+          catch(e){ schedRes = { data: [] } }
+          this.schedules = (schedRes && schedRes.data) ? schedRes.data : [];
 
         const m = {};
         for(const s of this.schedules){
@@ -168,21 +208,20 @@ export default {
         }
         this.map = m;
         this.$nextTick(()=>{
-          try{
-            const table = this.$refs.tableRef;
-            const topInner = this.$refs.topInner;
-            if(table && topInner) topInner.style.width = table.scrollWidth + 'px';
-          }catch(e){/* ignore */}
+          try{ const table = this.$refs.tableRef; const topInner = this.$refs.topInner; if(table && topInner) topInner.style.width = table.scrollWidth + 'px'; }catch(e){/* ignore */}
         })
         return;
       }
 
       // Default: server-side paged lawyers
       let lawRes;
-      try{ lawRes = await axios.get(base + `/lawyers?page=${this.page}&pageSize=${this.pageSize}`, { headers }); }
+      try{ lawRes = await axios.get(baseUrl(`/lawyers?page=${this.page}&pageSize=${this.pageSize}`), { headers: buildHeaders(this.token) }); }
       catch(e){ lawRes = { data: [] } }
       const lawData = (lawRes && lawRes.data) ? lawRes.data : [];
       this.lawyers = (lawData && lawData.items) ? lawData.items : lawData || [];
+      // ensure alphabetical order
+      try{ this.lawyers = sortByName(this.lawyers); }catch(e){}
+      try{ this.lawyers = (this.lawyers || []).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)) ); }catch(e){}
       const total = (lawData && lawData.total) || (Array.isArray(lawData) ? lawData.length : 0);
       this.totalCount = total;
       this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
@@ -191,7 +230,7 @@ export default {
       const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
       const ids = this.lawyers.map(l=>l.id).filter(Boolean).join(',');
       let schedRes2;
-      try{ schedRes2 = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : ''), { headers }); }
+      try{ schedRes2 = await axios.get(baseUrl(`/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : '')), { headers: buildHeaders(this.token) }); }
       catch(e){ schedRes2 = { data: [] } }
       this.schedules = (schedRes2 && schedRes2.data) ? schedRes2.data : [];
 
@@ -204,25 +243,50 @@ export default {
         m[s.lawyerId][day].push(s);
       }
       this.map = m;
-      this.$nextTick(()=>{
-        try{
-          const table = this.$refs.tableRef;
-          const topInner = this.$refs.topInner;
-          if(table && topInner) topInner.style.width = table.scrollWidth + 'px';
-        }catch(e){/* ignore */}
-      })
+      this.$nextTick(()=>{ try{ const table = this.$refs.tableRef; const topInner = this.$refs.topInner; if(table && topInner) topInner.style.width = table.scrollWidth + 'px'; }catch(e){/* ignore */} })
     },
-    async reload(){
-      this.page = 1;
-      await this.fetchPage();
-    },
-    async changePageSize(size){
-      if(typeof size !== 'undefined') this.pageSize = size;
-      this.page = 1;
-      await this.fetchPage();
-    },
+    async reload(){ this.page = 1; await this.fetchPage(); },
+    async changePageSize(size){ if(typeof size !== 'undefined') this.pageSize = size; this.page = 1; await this.fetchPage(); },
     async prevPage(){ if(this.page>1){ this.page--; await this.fetchPage(); } },
-    async nextPage(){ if(this.page < this.totalPages){ this.page++; await this.fetchPage(); } }
+    async nextPage(){ if(this.page < this.totalPages){ this.page++; await this.fetchPage(); } },
+
+    // schedule helpers
+    _handleScheduleDeleted(payload){
+      if(!payload) return;
+      const id = payload.id;
+      this.schedules = (this.schedules || []).filter(s=>s.id !== id);
+      const m = Object.assign({}, this.map);
+      for(const lw in m){
+        for(const d in m[lw]){
+          m[lw][d] = m[lw][d].filter(x=>x.id !== id);
+          if(m[lw][d].length === 0) delete m[lw][d];
+        }
+        if(Object.keys(m[lw]||{}).length === 0) delete m[lw];
+      }
+      this.map = m;
+    },
+    _handleScheduleEvent(payload){
+      if(!payload) return;
+      const items = Array.isArray(payload) ? payload : [payload];
+      const added = [];
+      for(const s of items){
+        if(!s || !s.lawyerId || !s.date) continue;
+        const visibleIds = (this.lawyers || []).map(x=>x.id);
+        if(visibleIds.includes(s.lawyerId)){
+          if(!(this.schedules || []).some(x=>x.id === s.id)) this.schedules = [...(this.schedules||[]), s];
+          const ld = new Date(s.date);
+          const day = ld.getDate();
+          const newMap = Object.assign({}, this.map || {});
+          if(!newMap[s.lawyerId]) newMap[s.lawyerId] = {};
+          if(!newMap[s.lawyerId][day]) newMap[s.lawyerId][day] = [];
+          if(!newMap[s.lawyerId][day].some(x=>x.id === s.id)) newMap[s.lawyerId][day] = [...newMap[s.lawyerId][day], s];
+          this.map = newMap;
+        }else{
+          added.push(s);
+        }
+      }
+      if(added.length) this.reload();
+    }
   }
 }
 </script>

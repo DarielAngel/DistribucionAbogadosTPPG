@@ -6,6 +6,7 @@ const { sequelize } = require('./models');
 const authRoutes = require('./routes/auth');
 const lawyersRoutes = require('./routes/lawyers');
 const schedulesRoutes = require('./routes/schedules');
+const eventsRoutes = require('./routes/events');
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/lawyers', lawyersRoutes);
 app.use('/api/schedules', schedulesRoutes);
+app.use('/api/events', eventsRoutes);
 
 const PORT = process.env.PORT || 4000;
 

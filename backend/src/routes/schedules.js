@@ -26,8 +26,11 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
         const payload = Object.assign({}, req.body, { date: iso });
         delete payload.startDate; delete payload.endDate;
         const s = await Schedule.create(payload);
-        createdItems.push(await Schedule.findByPk(s.id, { include: [{ model: Lawyer }] }));
+        const full = await Schedule.findByPk(s.id, { include: [{ model: Lawyer }] });
+        createdItems.push(full);
       }
+      // broadcast created schedules
+      try{ require('../events').sendEvent('schedule:created', createdItems); }catch(e){}
       return res.status(201).json(createdItems);
     }
 
@@ -40,6 +43,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
     }
     const s = await Schedule.create(req.body);
     const created = await Schedule.findByPk(s.id, { include: [{ model: Lawyer }] });
+    try{ require('../events').sendEvent('schedule:created', created); }catch(e){}
     res.status(201).json(created);
   }catch(err){
     res.status(500).json({ message: err.message });
@@ -76,6 +80,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
   const s = await Schedule.findByPk(req.params.id);
   if(!s) return res.status(404).json({ message: 'Not found' });
   await s.update(req.body);
+  try{ const full = await Schedule.findByPk(s.id, { include: [{ model: Lawyer }] }); require('../events').sendEvent('schedule:updated', full); }catch(e){}
   res.json(s);
 });
 
@@ -83,6 +88,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   const s = await Schedule.findByPk(req.params.id);
   if(!s) return res.status(404).json({ message: 'Not found' });
   await s.destroy();
+  try{ require('../events').sendEvent('schedule:deleted', { id: s.id, lawyerId: s.lawyerId, date: s.date }); }catch(e){}
   res.json({ message: 'Deleted' });
 });
 

@@ -11,8 +11,8 @@
         </ul>
       </div>
       <div class="flex items-center" v-if="!compact">
-        <button class="px-3 py-1 border rounded bg-white text-sm" @click="fetch" :disabled="loading">{{ loading ? 'Cargando...' : 'Refrescar' }}</button>
-      </div>
+          <button type="button" class="px-3 py-1 border rounded bg-white text-sm" @click="fetch" :disabled="loading">{{ loading ? 'Cargando...' : 'Refrescar' }}</button>
+        </div>
     </div>
     <ul v-if="!compact">
       <li v-for="l in lawyers" :key="l.id" :class="['border p-2 mb-1 hover:bg-red-50', { 'bg-blue-50': selectedIds.includes(l.id) } ]">
@@ -34,21 +34,50 @@
 <script>
 import axios from 'axios'
 import debounce from '../utils/debounce'
+import sse, { dispatchLocal } from '../utils/sse'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
+import { sortByName } from '../utils/sort'
 export default {
   props: { token: String, isAdmin: { type: Boolean, default: false }, compact: { type: Boolean, default: false } },
   data(){ return { lawyers: [], q: '', suggestions: [], showSuggestions: false, selectedSuggestionIndex: -1, selectedIds: [], loading: false } },
   created(){ if(!this.compact) this.fetch(); this.debouncedQuery = debounce(this._doSearch, 300) },
+  mounted(){
+    // subscribe to SSE updates for lawyers using the module emitter
+    this._sseCreated = (e)=>{
+      const l = (e && e.detail) || null;
+      if(!l) return;
+      if(this.compact) return;
+      if(!this.lawyers.find(x=>x.id===l.id)){
+        this.lawyers = [...this.lawyers, l].sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+      }
+    };
+    this._sseDeleted = (e)=>{
+      const payload = (e && e.detail) || {};
+      if(!payload || !payload.id) return;
+      this.lawyers = this.lawyers.filter(x=>x.id !== payload.id);
+      this.selectedIds = this.selectedIds.filter(x=>x !== payload.id);
+    };
+    this._sseUpdated = (e)=>{
+      const u = (e && e.detail) || null;
+      if(!u) return;
+      this.lawyers = this.lawyers.map(x=> x.id === u.id ? Object.assign({}, x, u) : x).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    };
+    try{ sse.addEventListener('lawyer:created', this._sseCreated); sse.addEventListener('lawyer:deleted', this._sseDeleted); sse.addEventListener('lawyer:updated', this._sseUpdated); }catch(e){}
+  },
+  beforeUnmount(){
+    try{ sse.removeEventListener('lawyer:created', this._sseCreated); sse.removeEventListener('lawyer:deleted', this._sseDeleted); sse.removeEventListener('lawyer:updated', this._sseUpdated); }catch(e){}
+  },
   methods: {
     // debounce moved to `src/utils/debounce.js`
     async fetch(){
       if(this.compact) return;
       try{
         this.loading = true;
-        const base = (import.meta.env.VITE_API_URL||'/api');
-        const url = base + '/lawyers?page=1&pageSize=100'
-        const res = await axios.get(url, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        const url = baseUrl('/lawyers?page=1&pageSize=100')
+        const res = await axios.get(url, { headers: buildHeaders(this.token) });
         // API returns { items, total }
-        this.lawyers = res.data.items || res.data;
+        this.lawyers = res.data.items || res.data || [];
+        this.lawyers = sortByName(this.lawyers);
       }finally{ this.loading = false }
     },
     onSearchInput(){
@@ -60,8 +89,8 @@ export default {
       const base = (import.meta.env.VITE_API_URL||'/api');
       // fetch suggestions
       try{
-        const url1 = base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=8`
-        const res = await axios.get(url1, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        const url1 = baseUrl(`/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=8`)
+        const res = await axios.get(url1, { headers: buildHeaders(this.token) });
         const items = res.data.items || res.data || [];
         this.suggestions = items.slice(0,8);
         this.showSuggestions = true;
@@ -70,9 +99,10 @@ export default {
       // update full list (only when not compact)
       if(this.compact) return;
       try{
-        const url2 = base + `/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`
-        const res2 = await axios.get(url2, { headers: this.token ? { Authorization: 'Bearer ' + this.token } : {} });
+        const url2 = baseUrl(`/lawyers?name=${encodeURIComponent(q)}&page=1&pageSize=100`)
+        const res2 = await axios.get(url2, { headers: buildHeaders(this.token) });
         this.lawyers = res2.data.items || res2.data || [];
+        this.lawyers = sortByName(this.lawyers);
       }catch(e){ /* ignore */ }
     },
     onKeyDown(e){
