@@ -16,7 +16,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # 👈 Actualizado de 18 a 20
+          node-version: '20'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -36,11 +36,13 @@ jobs:
 
       - name: Start backend
         working-directory: backend
-        run: pnpm run dev &
+        # Guardamos la salida en backend.log para poder leer el error si se cae
+        run: pnpm run dev > backend.log 2>&1 &
 
       - name: Start frontend
         working-directory: frontend
-        run: pnpm run dev &
+        # Guardamos la salida en frontend.log por si acaso
+        run: pnpm run dev > frontend.log 2>&1 &
 
       - name: Wait for services
         run: |
@@ -50,3 +52,16 @@ jobs:
       - name: Run Playwright E2E
         working-directory: frontend
         run: pnpm exec playwright test --reporter=list
+
+      # 🔍 ESTE PASO NUEVO IMPRIMIRÁ EL ERROR REAL SI ALGO FALLA
+      - name: Print Service Logs on Failure
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "=== LOGS DEL BACKEND (¿Por qué falló?) ==="
+          echo "========================================="
+          cat backend/backend.log || echo "No se pudo leer el archivo de logs del backend."
+          echo "========================================="
+          echo "=== LOGS DEL FRONTEND ==="
+          echo "========================================="
+          cat frontend/frontend.log || echo "No se pudo leer el archivo de logs del frontend."
