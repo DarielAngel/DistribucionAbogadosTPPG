@@ -34,9 +34,9 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright install --with-deps
 
-        # 🛠️ NUEVO PASO PARA PRISMA
-      - name: Setup SQLite Database (Prisma)
-        run: pnpm -C backend exec prisma db push
+      #   # 🛠️ NUEVO PASO PARA PRISMA
+      # - name: Setup SQLite Database (Prisma)
+      #   run: pnpm -C backend exec prisma db push
 
       - name: Start backend
         working-directory: backend
