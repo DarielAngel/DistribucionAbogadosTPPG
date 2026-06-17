@@ -9,6 +9,7 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +43,9 @@ jobs:
         run: pnpm run dev &
 
       - name: Wait for services
-        run: npx wait-on http://localhost:5173 && npx wait-on http://localhost:4000/api/lawyers
+        run: |
+          # Wait up to 2 minutes for both frontend and backend to be available
+          npx wait-on --timeout 120000 http://localhost:5173 http://localhost:4000/api/lawyers
 
       - name: Run Playwright E2E
         working-directory: frontend
