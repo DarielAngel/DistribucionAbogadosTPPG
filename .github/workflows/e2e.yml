@@ -16,7 +16,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -34,46 +34,27 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright install --with-deps
 
-      # 🛠️ PASO CRÍTICO PARA SQLite: Crea la base de datos y aplica el esquema antes de encender el backend
-      - name: Setup SQLite Database
-        run: |
-          cd backend
-          pnpm exec prisma db push || pnpm run build:db || echo "No se requirió paso previo de DB o se maneja automático."
-          
       - name: Start backend
         working-directory: backend
-        # Guardamos la salida en backend.log para poder leer el error si se cae
         run: pnpm run dev > backend.log 2>&1 &
 
       - name: Start frontend
         working-directory: frontend
-        # Guardamos la salida en frontend.log por si acaso
+        env:
+          VITE_API_URL: http://localhost:4000/api
         run: pnpm run dev > frontend.log 2>&1 &
 
-      # - name: Wait for services
-      #   run: |
-      #     # Espera hasta 2 minutos a que el frontend y la raíz del backend respondan
-      #     npx wait-on --timeout 120000 http://localhost:5173 http-get://localhost:4000
-
       - name: Wait for services
-        run: |
-          # 🛠️ SOLUCIÓN: Cambiamos 'localhost' por '127.0.0.1' y usamos 'tcp:'
-          # Esto evita los problemas de resolución IPv6 de GitHub Actions
-          npx wait-on --timeout 120000 tcp:127.0.0.1:5173 tcp:127.0.0.1:4000
+        run: npx wait-on --timeout 120000 tcp:127.0.0.1:5173 tcp:127.0.0.1:4000
 
       - name: Run Playwright E2E
         working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:4000/api
         run: pnpm exec playwright test --reporter=list
 
-      # 🔍 ESTE PASO NUEVO IMPRIMIRÁ EL ERROR REAL SI ALGO FALLA
       - name: Print Service Logs on Failure
         if: failure()
         run: |
-          echo "========================================="
-          echo "=== LOGS DEL BACKEND (¿Por qué falló?) ==="
-          echo "========================================="
-          cat backend/backend.log || echo "No se pudo leer el archivo de logs del backend."
-          echo "========================================="
-          echo "=== LOGS DEL FRONTEND ==="
-          echo "========================================="
-          cat frontend/frontend.log || echo "No se pudo leer el archivo de logs del frontend."
+          cat backend/backend.log || true
+          cat frontend/frontend.log || true
