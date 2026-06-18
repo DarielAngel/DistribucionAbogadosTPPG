@@ -2,12 +2,21 @@
   <div>
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-medium">Cronograma del mes</h3>
-      <div class="text-sm text-gray-600">{{ monthLabel }}</div>
+      <div class="flex items-center gap-3">
+          <div class="text-sm text-gray-600">{{ monthLabel }}</div>
+          <select v-model.number="month" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+            <option v-for="(m,i) in monthNames" :key="i" :value="i">{{ m }}</option>
+          </select>
+          <select v-model.number="year" @change="fetchPage" class="border rounded px-2 py-1 text-sm">
+            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+          </select>
+          <button type="button" class="px-2 py-1 border rounded bg-white text-sm" @click="reload">Refrescar</button>
+        </div>
     </div>
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
         <label class="text-sm">Filas por página:</label>
-        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="border rounded px-2 py-1">
+        <select v-model.number="pageSize" @change="changePageSize()" class="border rounded px-2 py-1">
           <option v-for="s in pageSizes" :key="s" :value="s">{{ s }}</option>
         </select>
         <button v-if="!expandedPageSizes" class="text-sm text-blue-600 ml-2" @click="expandPageSizes">Más opciones</button>
@@ -19,11 +28,15 @@
         <button class="px-2 py-1 border rounded bg-white" :disabled="page===totalPages" @click="nextPage">Siguiente</button>
       </div>
     </div>
-    <div class="overflow-auto border rounded">
-      <table class="min-w-full table-fixed text-sm">
+    <!-- Top synchronized scrollbar -->
+    <div ref="topScroll" class="overflow-x-auto overflow-y-hidden" style="height:16px;">
+      <div ref="topInner" style="height:1px;"></div>
+    </div>
+    <div ref="bottomScroll" class="overflow-auto border rounded">
+      <table ref="tableRef" class="min-w-full table-fixed text-sm">
         <thead class="bg-gray-100 sticky top-0">
           <tr>
-            <th class="p-2 w-48">Abogado</th>
+            <th class="p-2 w-36">Abogado</th>
             <th v-for="d in daysInMonth" :key="d" class="p-1 text-center w-10">{{ d }}</th>
           </tr>
         </thead>
@@ -45,7 +58,7 @@
     <div class="flex items-center justify-between mt-2">
       <div class="flex items-center gap-2">
         <label class="text-sm">Filas por página:</label>
-        <select v-model.number="pageSize" @change="changePageSize(pageSize)" class="border rounded px-2 py-1">
+        <select v-model.number="pageSize" @change="changePageSize()" class="border rounded px-2 py-1">
           <option v-for="s in pageSizes" :key="s + '-bottom'" :value="s">{{ s }}</option>
         </select>
         <button v-if="!expandedPageSizes" class="text-sm text-blue-600 ml-2" @click="expandPageSizes">Más opciones</button>
@@ -68,7 +81,11 @@
       <div class="text-sm text-gray-700"><strong>Tarea:</strong>
         <div v-if="selectedCell.tasks && selectedCell.tasks.length">
           <ul class="list-disc pl-5 mt-1">
-            <li v-for="t in selectedCell.tasks" :key="t.id">{{ t.type || t.description || 'Tarea sin título' }} — {{ t.startTime || 'hora no especificada' }}</li>
+            <li v-for="t in selectedCell.tasks" :key="t.id" class="mb-2 text-left">
+              <div class="font-medium">{{ t.description || t.type || 'Tarea sin título' }}</div>
+              <div class="text-xs text-gray-600">{{ t.category ? (t.category + ' • ') : '' }}{{ t.startTime ? t.startTime : '' }}{{ t.startTime && t.endTime ? (' - ' + t.endTime) : (t.endTime ? (' - ' + t.endTime) : '') }}</div>
+              <div class="text-xs text-gray-500">Asignado a: {{ (t.Lawyer && t.Lawyer.name) || selectedCell.lawyer.name }}</div>
+            </li>
           </ul>
         </div>
         <div v-else class="text-gray-500 mt-1">Ninguna tarea</div>
@@ -79,61 +96,144 @@
 
 <script>
 import axios from 'axios'
+import sse from '../utils/sse'
+import debounce from '../utils/debounce'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
+import { sortByName } from '../utils/sort'
+
 export default {
-  props: ['token','pageSizeProp'],
+  props: ['token','pageSizeProp','selectedLawyers'],
   data(){
     const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth(), lawyers: [], schedules: [], map: {}, _totalPages: 1,
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      lawyers: [],
+      schedules: [],
+      map: {},
+      _totalPages: 1,
       // pagination
       page: 1,
-      pageSize: (typeof this.pageSizeProp !== 'undefined' ? this.pageSizeProp : 25),
-      // start with only 25 available, expand on user request
-      pageSizes: [25],
+      pageSize: (typeof this.pageSizeProp !== 'undefined' ? this.pageSizeProp : 10),
+      pageSizes: [10],
       expandedPageSizes: false,
       totalCount: 0,
       selectedCell: null
     };
   },
   computed: {
+    monthNames(){ return Array.from({length:12},(_,i)=> new Date(0,i).toLocaleString(undefined,{month:'long'})) },
+    yearOptions(){ const y = new Date().getFullYear(); return Array.from({length:11},(_,i)=> y-5+i) },
     daysInMonth(){ return new Date(this.year, this.month+1, 0).getDate(); },
     monthLabel(){ return new Date(this.year, this.month, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' }) },
     totalPages(){ return this._totalPages || 1; },
     pagedLawyers(){ return this.lawyers || []; }
   },
-  created(){ this.fetchPage() },
+  created(){
+    this.reloadDebounced = debounce(()=> this.reload(), 200);
+    this.fetchPage();
+  },
+  mounted(){
+    // sync top and bottom scrolls
+    const top = this.$refs.topScroll;
+    const bottom = this.$refs.bottomScroll;
+    if(top && bottom){
+      top.addEventListener('scroll', ()=>{ bottom.scrollLeft = top.scrollLeft });
+      bottom.addEventListener('scroll', ()=>{ top.scrollLeft = bottom.scrollLeft });
+    }
+
+    // SSE handlers to keep schedule in sync
+    this._onScheduleCreated = (e) => { this._handleScheduleEvent(e && e.detail ? e.detail : e); };
+    this._onScheduleUpdated = (e) => { this._handleScheduleEvent(e && e.detail ? e.detail : e); };
+    this._onScheduleDeleted = (e) => { this._handleScheduleDeleted(e && e.detail ? e.detail : e); };
+    this._onLawyerCreated = (e) => { const l = e && e.detail ? e.detail : e; if(l && l.id) this.reloadDebounced(); };
+
+    try{
+      if(sse && sse.addEventListener){
+        sse.addEventListener('schedule:created', this._onScheduleCreated);
+        sse.addEventListener('schedule:updated', this._onScheduleUpdated);
+        sse.addEventListener('schedule:deleted', this._onScheduleDeleted);
+        sse.addEventListener('lawyer:created', this._onLawyerCreated);
+      }
+    }catch(e){ /* ignore */ }
+  },
+  beforeUnmount(){
+    try{
+      if(sse && sse.removeEventListener){
+        sse.removeEventListener('schedule:created', this._onScheduleCreated);
+        sse.removeEventListener('schedule:updated', this._onScheduleUpdated);
+        sse.removeEventListener('schedule:deleted', this._onScheduleDeleted);
+        sse.removeEventListener('lawyer:created', this._onLawyerCreated);
+      }
+    }catch(e){/* ignore */}
+  },
+  watch: {
+    selectedLawyers: { handler(){ this.page = 1; this.fetchPage(); }, deep: true }
+  },
   methods: {
     onCellClick(lawyer, day){
       const tasks = (this.map[lawyer.id] && this.map[lawyer.id][day]) || [];
       this.selectedCell = { lawyer, day, tasks };
     },
-    expandPageSizes(){
-      this.pageSizes = [25,50,100];
-      this.expandedPageSizes = true;
-    },
+    expandPageSizes(){ this.pageSizes = [10,25,50,100]; this.expandedPageSizes = true; },
     async fetchPage(){
       const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
       const base = (import.meta.env.VITE_API_URL||'/api');
-      // fetch schedules for the month (tests mock this call)
+
+      // If a selection filter is active, use it as the source and paginate client-side
+      if(this.selectedLawyers && this.selectedLawyers.length){
+        const source = this.selectedLawyers;
+        this.totalCount = source.length;
+        this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+        const startIndex = (this.page - 1) * this.pageSize;
+        const visible = source.slice(startIndex, startIndex + this.pageSize);
+        this.lawyers = visible;
+        try{ this.lawyers = (this.lawyers || []).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)) ); }catch(e){}
+
+          const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
+          const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
+          const ids = visible.map(l=>l.id).filter(Boolean).join(',');
+          let schedRes;
+          try{ schedRes = await axios.get(baseUrl(`/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : '')), { headers: buildHeaders(this.token) }); }
+          catch(e){ schedRes = { data: [] } }
+          this.schedules = (schedRes && schedRes.data) ? schedRes.data : [];
+
+        const m = {};
+        for(const s of this.schedules){
+          const ld = new Date(s.date);
+          const day = ld.getDate();
+          if(!m[s.lawyerId]) m[s.lawyerId] = {};
+          if(!m[s.lawyerId][day]) m[s.lawyerId][day] = [];
+          m[s.lawyerId][day].push(s);
+        }
+        this.map = m;
+        this.$nextTick(()=>{
+          try{ const table = this.$refs.tableRef; const topInner = this.$refs.topInner; if(table && topInner) topInner.style.width = table.scrollWidth + 'px'; }catch(e){/* ignore */}
+        })
+        return;
+      }
+
+      // Default: server-side paged lawyers
+      let lawRes;
+      try{ lawRes = await axios.get(baseUrl(`/lawyers?page=${this.page}&pageSize=${this.pageSize}`), { headers: buildHeaders(this.token) }); }
+      catch(e){ lawRes = { data: [] } }
+      const lawData = (lawRes && lawRes.data) ? lawRes.data : [];
+      this.lawyers = (lawData && lawData.items) ? lawData.items : lawData || [];
+      // ensure alphabetical order
+      try{ this.lawyers = sortByName(this.lawyers); }catch(e){}
+      try{ this.lawyers = (this.lawyers || []).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)) ); }catch(e){}
+      const total = (lawData && lawData.total) || (Array.isArray(lawData) ? lawData.length : 0);
+      this.totalCount = total;
+      this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+
       const start = `${this.year}-${String(this.month+1).padStart(2,'0')}-01`;
       const end = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(this.daysInMonth).padStart(2,'0')}`;
-      const schedRes = await axios.get(base + `/schedules?startDate=${start}&endDate=${end}`, { headers });
-      this.schedules = schedRes.data || [];
-      // derive lawyers from schedules when needed (tests provide schedules with Lawyer.name)
-      const lwMap = {};
-      this.schedules.forEach((s, idx) => {
-        if(!s.lawyerId){ s.lawyerId = s.lawyerId || (s.Lawyer && s.Lawyer.id) || ('gen_' + idx) }
-        const lid = s.lawyerId;
-        if(s.Lawyer && s.Lawyer.name){
-          lwMap[lid] = lwMap[lid] || { id: lid, name: s.Lawyer.name, specialization: s.type || '' };
-        } else {
-          lwMap[lid] = lwMap[lid] || { id: lid, name: '—', specialization: '' };
-        }
-      });
-      this.lawyers = Object.values(lwMap);
-      // set counts
-      this.totalCount = this.lawyers.length || 0;
-      this._totalPages = Math.max(1, Math.ceil(this.totalCount / this.pageSize));
-      // build map lawyerId -> day -> [schedules]
+      const ids = this.lawyers.map(l=>l.id).filter(Boolean).join(',');
+      let schedRes2;
+      try{ schedRes2 = await axios.get(baseUrl(`/schedules?startDate=${start}&endDate=${end}` + (ids ? `&lawyerIds=${ids}` : '')), { headers: buildHeaders(this.token) }); }
+      catch(e){ schedRes2 = { data: [] } }
+      this.schedules = (schedRes2 && schedRes2.data) ? schedRes2.data : [];
+
       const m = {};
       for(const s of this.schedules){
         const ld = new Date(s.date);
@@ -143,10 +243,50 @@ export default {
         m[s.lawyerId][day].push(s);
       }
       this.map = m;
+      this.$nextTick(()=>{ try{ const table = this.$refs.tableRef; const topInner = this.$refs.topInner; if(table && topInner) topInner.style.width = table.scrollWidth + 'px'; }catch(e){/* ignore */} })
     },
-    changePageSize(size){ this.pageSize = size; this.page = 1; this.fetchPage(); },
+    async reload(){ this.page = 1; await this.fetchPage(); },
+    async changePageSize(size){ if(typeof size !== 'undefined') this.pageSize = size; this.page = 1; await this.fetchPage(); },
     async prevPage(){ if(this.page>1){ this.page--; await this.fetchPage(); } },
-    async nextPage(){ if(this.page < this.totalPages){ this.page++; await this.fetchPage(); } }
+    async nextPage(){ if(this.page < this.totalPages){ this.page++; await this.fetchPage(); } },
+
+    // schedule helpers
+    _handleScheduleDeleted(payload){
+      if(!payload) return;
+      const id = payload.id;
+      this.schedules = (this.schedules || []).filter(s=>s.id !== id);
+      const m = Object.assign({}, this.map);
+      for(const lw in m){
+        for(const d in m[lw]){
+          m[lw][d] = m[lw][d].filter(x=>x.id !== id);
+          if(m[lw][d].length === 0) delete m[lw][d];
+        }
+        if(Object.keys(m[lw]||{}).length === 0) delete m[lw];
+      }
+      this.map = m;
+    },
+    _handleScheduleEvent(payload){
+      if(!payload) return;
+      const items = Array.isArray(payload) ? payload : [payload];
+      const added = [];
+      for(const s of items){
+        if(!s || !s.lawyerId || !s.date) continue;
+        const visibleIds = (this.lawyers || []).map(x=>x.id);
+        if(visibleIds.includes(s.lawyerId)){
+          if(!(this.schedules || []).some(x=>x.id === s.id)) this.schedules = [...(this.schedules||[]), s];
+          const ld = new Date(s.date);
+          const day = ld.getDate();
+          const newMap = Object.assign({}, this.map || {});
+          if(!newMap[s.lawyerId]) newMap[s.lawyerId] = {};
+          if(!newMap[s.lawyerId][day]) newMap[s.lawyerId][day] = [];
+          if(!newMap[s.lawyerId][day].some(x=>x.id === s.id)) newMap[s.lawyerId][day] = [...newMap[s.lawyerId][day], s];
+          this.map = newMap;
+        }else{
+          added.push(s);
+        }
+      }
+      if(added.length) this.reload();
+    }
   }
 }
 </script>

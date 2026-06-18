@@ -16,7 +16,8 @@ test('full login flow and view lawyers', async ({ page, request }) => {
   // Fill login form (email input has no type attribute)
   await page.locator('input').first().fill(email);
   await page.fill('input[type="password"]', pw);
-  await page.click('text=Entrar');
+  // await page.click('text=Entrar');
+  await page.getByRole('button', { name: /entrar/i }).click();
 
   // Expect admin dashboard visible
   await expect(page.locator('text=Administrador')).toBeVisible({ timeout: 5000 });

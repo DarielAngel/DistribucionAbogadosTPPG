@@ -1,10 +1,15 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const config = require('../config/config');
 
-const sequelize = new Sequelize(config.databaseUrl, {
-  dialect: 'postgres',
-  logging: false
-});
+// Prefer explicit dialect when using sqlite in dev/test to ensure compatibility
+let dialect;
+if (config.databaseUrl && config.databaseUrl.startsWith('sqlite')) dialect = 'sqlite';
+else if (config.databaseUrl && config.databaseUrl.startsWith('postgres')) dialect = 'postgres';
+
+const sequelizeOptions = { logging: false };
+if (dialect) sequelizeOptions.dialect = dialect;
+
+const sequelize = new Sequelize(config.databaseUrl, sequelizeOptions);
 
 const db = {};
 db.Sequelize = Sequelize;

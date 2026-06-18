@@ -7,12 +7,15 @@ vi.mock('axios')
 test('renders lawyers list and calendar entries in admin dashboard', async () => {
   // LawyersList will call /lawyers
   axios.get.mockResolvedValueOnce({ data: [{ id: 1, name: 'María' }] })
+  // MonthSchedule will call /lawyers (paged)
+  axios.get.mockResolvedValueOnce({ data: [{ id: 1, name: 'María' }] })
   // CalendarView will call /schedules
-  axios.get.mockResolvedValueOnce({ data: [{ id: 2, date: '2026-06-10', type: 'Audiencia', Lawyer: { name: 'María' } }] })
+  axios.get.mockResolvedValueOnce({ data: [{ id: 2, date: '2026-06-10', type: 'Audiencia', lawyerId: 1 }] })
 
   render(AdminDashboard, { props: { token: 't' } })
 
   await waitFor(() => expect(screen.getByText('Gestión de abogados')).toBeInTheDocument())
   await waitFor(() => expect(screen.getAllByText('María').length).toBeGreaterThan(0))
-  await waitFor(() => expect(screen.getByText(/Audiencia/)).toBeInTheDocument())
+  // MonthSchedule renders occupancy; check for an occupied cell label
+  await waitFor(() => expect(screen.getByText('Ocupado')).toBeInTheDocument())
 })

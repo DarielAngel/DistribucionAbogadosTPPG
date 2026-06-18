@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { Lawyer } = require('../models');
+const { Lawyer, Schedule } = require('../models');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // Create lawyer (admin only)
 router.post('/', authenticate, authorize('admin'), async (req, res) => {
   try{
     const l = await Lawyer.create(req.body);
+    // broadcast event
+    try{ require('../events').sendEvent('lawyer:created', l); }catch(e){/* ignore */}
     res.json(l);
   }catch(err){
     res.status(500).json({ message: err.message });
@@ -17,21 +19,23 @@ router.post('/', authenticate, authorize('admin'), async (req, res) => {
 router.get('/', authenticate, async (req, res) => {
   // support pagination and simple search
   const { province, municipality, name, page = 1, pageSize = 25 } = req.query;
-  const where = {};
-  const { Op } = require('sequelize');
-  if(province) where.province = province;
-  if(municipality) where.municipality = municipality;
-  if(name) {
-    where[Op.or] = [
-      { name: { [Op.iLike]: `%${name}%` } },
-      { province: { [Op.iLike]: `%${name}%` } },
-      { municipality: { [Op.iLike]: `%${name}%` } }
+  const whereClause = {};
+  const { Op, fn, col, where } = require('sequelize');
+  if (province) whereClause.province = province;
+  if (municipality) whereClause.municipality = municipality;
+  if (name) {
+    // Use lower(...) and LIKE to provide case-insensitive partial matching across dialects
+    const n = String(name).toLowerCase();
+    whereClause[Op.or] = [
+      where(fn('lower', col('name')), { [Op.like]: `%${n}%` }),
+      where(fn('lower', col('province')), { [Op.like]: `%${n}%` }),
+      where(fn('lower', col('municipality')), { [Op.like]: `%${n}%` })
     ];
   }
   try{
     const limit = Math.min(100, parseInt(pageSize) || 25);
     const offset = (Math.max(1, parseInt(page) || 1) - 1) * limit;
-    const { count, rows } = await Lawyer.findAndCountAll({ where, limit, offset, order: [['name','ASC']] });
+    const { count, rows } = await Lawyer.findAndCountAll({ where: whereClause, limit, offset, order: [['name','ASC']] });
     res.json({ items: rows, total: count, page: parseInt(page), pageSize: limit });
   }catch(err){
     res.status(500).json({ message: err.message });
@@ -57,8 +61,15 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
 router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   const l = await Lawyer.findByPk(req.params.id);
   if(!l) return res.status(404).json({ message: 'Not found' });
-  await l.destroy();
-  res.json({ message: 'Deleted' });
+  try{
+    // remove schedules associated with lawyer first to ensure consistency
+    await Schedule.destroy({ where: { lawyerId: l.id } });
+    await l.destroy();
+    try{ require('../events').sendEvent('lawyer:deleted', { id: l.id }); }catch(e){}
+    res.json({ message: 'Deleted' });
+  }catch(err){
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;

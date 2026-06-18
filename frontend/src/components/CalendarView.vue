@@ -16,14 +16,15 @@
 
 <script>
 import axios from 'axios'
+import { baseUrl, buildHeaders } from '../utils/apiClient'
 export default {
   props: ['token'],
   data(){ return { date: new Date().toISOString().slice(0,10), items: [] } },
   created(){ this.fetch() },
   methods: {
     async fetch(){
-      const res = await axios.get((import.meta.env.VITE_API_URL||'/api') + '/schedules?date=' + this.date, { headers: { Authorization: 'Bearer ' + this.token } });
-      this.items = res.data;
+      const res = await axios.get(baseUrl(`/schedules?date=${this.date}`), { headers: buildHeaders(this.token) });
+      this.items = res.data || [];
     }
   }
 }
