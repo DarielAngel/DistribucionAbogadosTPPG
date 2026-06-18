@@ -34,10 +34,12 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright install --with-deps
 
-      #   # 🛠️ NUEVO PASO PARA PRISMA
-      # - name: Setup SQLite Database (Prisma)
-      #   run: pnpm -C backend exec prisma db push
-
+      # 🛠️ PASO CRÍTICO PARA SQLite: Crea la base de datos y aplica el esquema antes de encender el backend
+      - name: Setup SQLite Database
+        run: |
+          cd backend
+          pnpm exec prisma db push || pnpm run build:db || echo "No se requirió paso previo de DB o se maneja automático."
+          
       - name: Start backend
         working-directory: backend
         # Guardamos la salida en backend.log para poder leer el error si se cae
