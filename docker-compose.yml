@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: sqlite:///app/data/database.sqlite
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      FRONTEND_URL: http://localhost
+    volumes:
+      - db_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:

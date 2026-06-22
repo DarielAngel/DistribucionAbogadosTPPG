@@ -8,31 +8,32 @@ const emitter = (typeof window !== 'undefined' && typeof EventTarget !== 'undefi
 
 function dispatchLocal(name, payload){
   try{ emitter.dispatchEvent(new CustomEvent(name, { detail: payload })); }
-  catch(e){ /* no-op */ }
+  catch(e){}
 }
 
+let _es = null;
+
 function startSSE(){
-  if(typeof window === 'undefined') return null;
-  if(import.meta.env && import.meta.env.VITEST) return null; // don't open during tests
+  if(typeof window === 'undefined') return;
+  if(import.meta.env && import.meta.env.VITEST) return;
+  if(_es) return; // ya conectado
   const base = import.meta.env.VITE_API_URL || '/api';
   try{
-    const es = new EventSource(base + '/events');
+    _es = new EventSource(base + '/events');
     const events = ['lawyer:created','lawyer:deleted','lawyer:updated','schedule:created','schedule:updated','schedule:deleted'];
     events.forEach(evName => {
-      es.addEventListener(evName, e => {
+      _es.addEventListener(evName, e => {
         try{ const data = JSON.parse(e.data); emitter.dispatchEvent(new CustomEvent(evName, { detail: data })); }
         catch(err){ emitter.dispatchEvent(new CustomEvent(evName, { detail: null })); }
       });
     });
-    es.onopen = ()=>{ console.debug('SSE connected'); };
-    es.onerror = (err)=>{ console.warn('SSE error', err); };
-    return es;
-  }catch(e){ return null }
+    _es.onopen = () => console.debug('SSE connected');
+    _es.onerror = () => {}; // reconecta solo, sin spam en consola
+  }catch(e){}
 }
 
-// auto-start in non-test environments
-if(typeof window !== 'undefined' && !(import.meta.env && import.meta.env.VITEST)){
-  startSSE();
+function stopSSE(){
+  if(_es){ _es.close(); _es = null; }
 }
 
-export { emitter as default, dispatchLocal, startSSE };
+export { emitter as default, dispatchLocal, startSSE, stopSSE };

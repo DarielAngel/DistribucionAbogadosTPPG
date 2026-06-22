@@ -18,6 +18,7 @@ db.sequelize = sequelize;
 db.User = require('./user')(sequelize, DataTypes);
 db.Lawyer = require('./lawyer')(sequelize, DataTypes);
 db.Schedule = require('./schedule')(sequelize, DataTypes);
+db.Setting = require('./setting')(sequelize, DataTypes);
 
 // Relations
 db.User.hasMany(db.Lawyer, { foreignKey: 'createdBy' });
