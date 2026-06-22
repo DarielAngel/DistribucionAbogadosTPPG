@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "cross-env NODE_ENV=test jest --runInBand",
-    "seed": "node src/scripts/seed.js"
+    "seed": "node src/scripts/seed.js",
+    "import-excel": "python3 src/scripts/import_excel.py"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",
