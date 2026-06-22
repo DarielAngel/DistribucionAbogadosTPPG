@@ -46,13 +46,11 @@ export default {
   methods: {
     async submit(){
       try{
+        // backend sets HttpOnly cookie; response only has role + name
         const res = await axios.post(baseUrl('/auth/login'), { email: this.email, password: this.password });
-        const token = res.data.token;
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        this.$emit('login', { token, role: payload.role });
+        this.$emit('login', { role: res.data.role });
       }catch(e){
-        // emit no login on error; caller/show UI should handle
-        this.$emit('login-error', e);
+        alert('Credenciales incorrectas');
       }
     }
   }

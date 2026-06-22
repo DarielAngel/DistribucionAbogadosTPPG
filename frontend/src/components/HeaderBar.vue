@@ -25,6 +25,7 @@
     </div>
     <div class="flex items-center gap-3">
       <div class="text-sm mr-2">{{ roleLabel }}</div>
+      <button v-if="isAdmin" class="bg-white text-[#6B0B0B] px-3 py-1 rounded text-sm" @click="$emit('open-settings')">⚙ Configuración</button>
       <button class="bg-white text-[#6B0B0B] px-3 py-1 rounded" @click="$emit('logout')">Cerrar sesión</button>
     </div>
     <AddLawyerModal v-if="showAdd" :token="token" @close="showAdd=false" @added="onAdded" />

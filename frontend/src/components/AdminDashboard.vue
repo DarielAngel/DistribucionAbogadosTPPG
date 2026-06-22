@@ -18,11 +18,11 @@
       </div>
       <div class="col-span-2">
         <h3 class="font-medium">Cronograma</h3>
-        <MonthSchedule ref="monthSchedule" :token="token" :page-size-prop="pageSize" :selected-lawyers="selectedLawyers" />
+        <MonthSchedule ref="monthSchedule" :token="token" :page-size-prop="pageSize" :selected-lawyers="selectedLawyers" :blocked-days="blockedDays" />
       </div>
     </div>
     <ConfirmModal v-if="showConfirmDelete" :title="pendingDelete ? ('Eliminar ' + pendingDelete.name) : 'Eliminar'" :message="pendingDelete ? ('¿Eliminar al abogado ' + pendingDelete.name + '? Esto eliminará también todas sus tareas.') : '¿Confirmar? '" @confirm="onConfirmDelete" @cancel="showConfirmDelete=false" />
-    <AddTaskModal v-if="showAddTask" :lawyer="activeLawyer" :token="token" @added="onTaskAdded" @close="showAddTask=false" />
+    <AddTaskModal v-if="showAddTask" :lawyer="activeLawyer" :token="token" :blocked-days="blockedDays" @added="onTaskAdded" @close="showAddTask=false" />
   </div>
 </template>
 
@@ -36,7 +36,7 @@ import { baseUrl, buildHeaders } from '../utils/apiClient'
 import { showToast } from '../utils/toast'
 
 export default {
-  props: ['token','selectedLawyers','isAdmin','openAddTaskSignal'],
+  props: { token: String, selectedLawyers: Array, isAdmin: Boolean, openAddTaskSignal: Number, blockedDays: { type: Array, default: () => [0, 5, 6] } },
   components: { LawyersList, MonthSchedule, ConfirmModal, AddTaskModal },
   data(){ return { activeLawyer: null, pageSize: 25, pendingDelete: null, showConfirmDelete:false, showAddTask:false, _lastOpenAddTaskSignal: null } },
   methods:{

@@ -7,15 +7,20 @@ const authRoutes = require('./routes/auth');
 const lawyersRoutes = require('./routes/lawyers');
 const schedulesRoutes = require('./routes/schedules');
 const eventsRoutes = require('./routes/events');
+const configRoutes = require('./routes/config');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5174',
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/lawyers', lawyersRoutes);
 app.use('/api/schedules', schedulesRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/config', configRoutes);
 
 const PORT = process.env.PORT || 4000;
 
