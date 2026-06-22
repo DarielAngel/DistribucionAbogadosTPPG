@@ -9,12 +9,12 @@
       <form @submit.prevent="onSubmit" class="space-y-3" novalidate>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label for="lawyer-name" class="block text-sm font-medium">Nombre <span class="text-red-600">*</span></label>
-            <input id="lawyer-name" ref="firstInput" v-model="lawyer.name" required placeholder="Ej. Ana Pérez" class="border p-2 w-full rounded" aria-required="true" />
+            <label for="lawyer-name" class="block text-sm font-medium">Nombre</label>
+            <input id="lawyer-name" ref="firstInput" v-model="lawyer.name" placeholder="Ej. Ana Pérez" class="border p-2 w-full rounded" />
           </div>
           <div>
-            <label for="lawyer-email" class="block text-sm font-medium">Email <span class="text-red-600">*</span></label>
-            <input id="lawyer-email" v-model="lawyer.email" type="email" required placeholder="ejemplo@correo.com" class="border p-2 w-full rounded" aria-required="true" />
+            <label for="lawyer-email" class="block text-sm font-medium">Email</label>
+            <input id="lawyer-email" v-model="lawyer.email" type="email" placeholder="ejemplo@correo.com" class="border p-2 w-full rounded" />
           </div>
           <div>
             <label for="lawyer-phone" class="block text-sm font-medium">Teléfono</label>
@@ -65,7 +65,7 @@ export default {
     }
   },
   computed: {
-    canSave(){ return this.lawyer.name && this.lawyer.email }
+    canSave(){ return true }
   },
   mounted(){
     // focus first input for accessibility
@@ -74,7 +74,6 @@ export default {
   methods: {
     
     async onSubmit(){
-      if(!this.canSave) { this.successMessage = ''; return; }
       try{
         this.saving = true;
         const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
