@@ -54,6 +54,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
   const l = await Lawyer.findByPk(req.params.id);
   if(!l) return res.status(404).json({ message: 'Not found' });
   await l.update(req.body);
+  try{ require('../events').sendEvent('lawyer:updated', l); }catch(e){}
   res.json(l);
 });
 

@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white text-black rounded shadow-lg w-11/12 max-w-2xl p-4 max-h-[90vh] overflow-auto">
       <div class="flex justify-between items-center mb-3">
-        <h3 class="text-lg font-medium">Adicionar abogado</h3>
+        <h3 class="text-lg font-medium">{{ editLawyer ? 'Editar abogado' : 'Adicionar abogado' }}</h3>
         <button class="text-gray-500" @click="$emit('close')">✕</button>
       </div>
 
@@ -34,14 +34,14 @@
           </div>
         </div>
 
-        <div class="text-sm text-gray-600">Una vez creado el abogado, podrá añadirle tareas desde la sección del abogado seleccionado.</div>
+        <div v-if="!editLawyer" class="text-sm text-gray-600">Una vez creado el abogado, podrá añadirle tareas desde la sección del abogado seleccionado.</div>
 
         <div class="flex justify-between items-center gap-2 mt-3">
           <div class="text-sm text-green-600" v-if="successMessage">{{ successMessage }}</div>
             <div class="flex justify-end gap-2">
               <button type="button" class="px-4 py-2 border rounded bg-gray-100" @click="$emit('close')">Cancelar</button>
               <button type="submit" :disabled="!canSave || saving" class="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-60">
-                <span v-if="!saving">Crear abogado</span>
+                <span v-if="!saving">{{ editLawyer ? 'Guardar cambios' : 'Crear abogado' }}</span>
                 <span v-else>Guardando...</span>
               </button>
           </div>
@@ -56,10 +56,11 @@ import axios from 'axios'
 import { showToast } from '../utils/toast'
 import { baseUrl, buildHeaders } from '../utils/apiClient'
 export default {
-  props: ['token'],
+  props: ['token', 'editLawyer'],
   data(){
+    const base = { name:'', email:'', phone:'', province:'', municipality:'', specialization:'' };
     return {
-      lawyer: { name:'', email:'', phone:'', province:'', municipality:'', specialization:'' },
+      lawyer: this.editLawyer ? { ...base, ...this.editLawyer } : base,
       saving: false,
       successMessage: ''
     }
@@ -68,26 +69,30 @@ export default {
     canSave(){ return true }
   },
   mounted(){
-    // focus first input for accessibility
     this.$nextTick(()=>{ if(this.$refs.firstInput) this.$refs.firstInput.focus(); });
   },
   methods: {
-    
     async onSubmit(){
       try{
         this.saving = true;
-        const headers = this.token ? { Authorization: 'Bearer ' + this.token } : {};
-        // create lawyer
-        const lawRes = await axios.post(baseUrl('/lawyers'), this.lawyer, { headers: buildHeaders(this.token) });
-        const createdLawyer = lawRes.data;
-
-        this.successMessage = 'Abogado creado correctamente';
-        showToast('Abogado creado', 'success');
-        this.$emit('added', createdLawyer);
+        let result;
+        if(this.editLawyer){
+          const res = await axios.put(baseUrl(`/lawyers/${this.editLawyer.id}`), this.lawyer, { headers: buildHeaders(this.token) });
+          result = res.data;
+          this.successMessage = 'Abogado actualizado correctamente';
+          showToast('Abogado actualizado', 'success');
+          this.$emit('updated', result);
+        } else {
+          const res = await axios.post(baseUrl('/lawyers'), this.lawyer, { headers: buildHeaders(this.token) });
+          result = res.data;
+          this.successMessage = 'Abogado creado correctamente';
+          showToast('Abogado creado', 'success');
+          this.$emit('added', result);
+        }
         setTimeout(()=>{ this.$emit('close'); }, 300);
       }catch(err){
         console.error(err);
-        showToast('Error al crear abogado', 'error');
+        showToast(this.editLawyer ? 'Error al actualizar abogado' : 'Error al crear abogado', 'error');
       }finally{
         this.saving = false;
       }

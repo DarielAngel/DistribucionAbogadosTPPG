@@ -23,6 +23,7 @@
             <div class="text-xs text-gray-600">{{ l.province }} - {{ l.municipality }} • {{ l.specialization }}</div>
           </div>
           <div class="ml-3 flex items-center gap-2">
+            <button v-if="isAdmin" class="text-sm text-blue-600 px-2 py-1 border rounded" @click.stop="$emit('request-edit', l)">Editar</button>
             <button v-if="isAdmin" class="text-sm text-red-600 px-2 py-1 border rounded" @click.stop="confirmDelete(l)">Eliminar</button>
           </div>
         </div>
