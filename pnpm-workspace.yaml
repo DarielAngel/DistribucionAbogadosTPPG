@@ -1,0 +1,8 @@
+packages:
+  - "backend"
+  - "frontend"
+  - "scripts"
+allowBuilds:
+  bcrypt: true
+  esbuild: true
+  sqlite3: true
