@@ -1,13 +1,29 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-abogados}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      POSTGRES_DB: ${POSTGRES_DB:-abogados_db}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-abogados} -d ${POSTGRES_DB:-abogados_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     build: ./backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: sqlite:///app/data/database.sqlite
+      DATABASE_URL: postgres://${POSTGRES_USER:-abogados}:${POSTGRES_PASSWORD:-change-me-in-production}@db:5432/${POSTGRES_DB:-abogados_db}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       FRONTEND_URL: http://localhost
-    volumes:
-      - db_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
