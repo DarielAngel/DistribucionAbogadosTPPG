@@ -28,9 +28,9 @@ describe('Schedules and lawyer lifecycle', () => {
     expect(lawRes.statusCode).toBe(200);
     const lawyer = lawRes.body;
 
-    // create schedule range
-    const startDate = '2026-06-20';
-    const endDate = '2026-06-22';
+    // create schedule range (Tue-Thu: avoids the default blocked days Fri/Sat/Sun)
+    const startDate = '2026-06-23';
+    const endDate = '2026-06-25';
     const schRes = await request(app)
       .post('/api/schedules')
       .set('Authorization', 'Bearer ' + token)
@@ -39,7 +39,7 @@ describe('Schedules and lawyer lifecycle', () => {
     expect(Array.isArray(schRes.body)).toBe(true);
     expect(schRes.body.length).toBe(3);
     const dates = schRes.body.map(s => s.date).sort();
-    expect(dates).toEqual([startDate, '2026-06-21', endDate].sort());
+    expect(dates).toEqual([startDate, '2026-06-24', endDate].sort());
   });
 
   test('DELETE /api/lawyers/:id removes lawyer and its schedules', async () => {

@@ -1,0 +1,55 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: abogados
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: abogados_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U abogados -d abogados_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      # Same Postgres dialect used in docker-compose/production, so the test
+      # suite exercises the real DB engine instead of only sqlite in-memory.
+      DATABASE_URL: postgres://abogados:test-password@localhost:5432/abogados_test
+      JWT_SECRET: test-secret
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: '9'
+          run_install: false
+
+      - name: Install backend dependencies
+        run: pnpm -C backend install
+
+      - name: Run Jest
+        working-directory: backend
+        run: pnpm test

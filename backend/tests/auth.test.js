@@ -24,7 +24,7 @@ describe('Auth roles', () => {
     expect(dbUser.role).toBe('client');
   });
 
-  test('register admin and login returns token with admin role', async () => {
+  test('register admin and login sets an httpOnly cookie with admin role', async () => {
     const reg = await request(app)
       .post('/api/auth/register')
       .send({ name: 'Admin', email: 'admin2@example.com', password: 'password', role: 'admin' });
@@ -35,8 +35,15 @@ describe('Auth roles', () => {
       .post('/api/auth/login')
       .send({ email: 'admin2@example.com', password: 'password' });
     expect(login.statusCode).toBe(200);
-    expect(login.body).toHaveProperty('token');
-    const payload = jwt.verify(login.body.token, jwtSecret);
+    expect(login.body.role).toBe('admin');
+
+    // auth is delivered via an httpOnly cookie, not the response body
+    const cookies = login.headers['set-cookie'] || [];
+    const tokenCookie = cookies.find(c => c.startsWith('token='));
+    expect(tokenCookie).toBeDefined();
+    expect(tokenCookie).toMatch(/HttpOnly/i);
+    const token = tokenCookie.split(';')[0].slice('token='.length);
+    const payload = jwt.verify(token, jwtSecret);
     expect(payload.role).toBe('admin');
     expect(payload).toHaveProperty('id');
   });
